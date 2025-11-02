@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import type { TVMazeShow } from '@/types/tvmaze';
 import ShowCard from '@/components/ShowCard.vue';
+import VirtualHorizontalList from '@/components/VirtualHorizontalList.vue';
 
 const props = defineProps<{
   genre: string;
@@ -20,11 +21,18 @@ const subtitle = computed(() => {
       <h2 class="genre-rail__title">{{ genre }}</h2>
       <span class="genre-rail__meta">{{ subtitle }}</span>
     </header>
-    <div class="genre-rail__track" role="list">
-      <div v-for="show in shows" :key="show.id" class="genre-rail__item" role="listitem">
-        <ShowCard :show="show" />
-      </div>
-    </div>
+    <VirtualHorizontalList
+      :items="shows"
+      :item-width="200"
+      :item-gap="16"
+      :item-height="320"
+      role="list"
+      class="genre-rail__list"
+    >
+      <template #default="{ item }">
+        <ShowCard :show="item as TVMazeShow" />
+      </template>
+    </VirtualHorizontalList>
   </section>
 </template>
 
@@ -52,29 +60,24 @@ const subtitle = computed(() => {
   color: rgba(255, 255, 255, 0.55);
 }
 
-.genre-rail__track {
-  display: flex;
-  gap: 1rem;
-  overflow-x: auto;
+.genre-rail__list {
   padding-bottom: 0.75rem;
 }
 
-.genre-rail__track::-webkit-scrollbar {
-  height: 6px;
+.genre-rail__list ::v-deep(.virtual-rail__cell) {
+  margin-right: 0;
 }
 
-.genre-rail__track::-webkit-scrollbar-thumb {
-  background: rgba(255, 45, 85, 0.5);
+.genre-rail__list ::v-deep(.virtual-rail__cell:last-child) {
+  margin-right: 0;
 }
 
-.genre-rail__item {
-  flex: 0 0 auto;
-  display: flex;
+.genre-rail__list ::v-deep(.virtual-rail__items) {
+  gap: 16px;
 }
 
-.genre-rail__item :deep(.show-card) {
-  width: 200px;
-  min-width: 200px;
+.genre-rail__list ::v-deep(.virtual-rail__cell > *) {
+  width: 100%;
 }
 
 @media (max-width: 720px) {

@@ -1,20 +1,14 @@
 <script setup lang="ts">
-import { provide, ref, watch } from 'vue';
+import { ref, watch } from 'vue';
 import { RouterView, useRoute, useRouter } from 'vue-router';
 import AppHeader from '@/components/AppHeader.vue';
-import { searchLoadingKey } from '@/composables/useSearchLoading';
+import { useSearchLoading } from '@/composables/useSearchLoading';
 
 const route = useRoute();
 const router = useRouter();
+const { isSearching } = useSearchLoading();
 
 const searchQuery = ref((route.query.q as string) ?? '');
-const isSearching = ref(false);
-
-provide(searchLoadingKey, {
-  setSearching(value: boolean) {
-    isSearching.value = value;
-  },
-});
 
 watch(
   () => route.query.q,
