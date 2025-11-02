@@ -8,6 +8,8 @@ import ShowCard from '@/components/ShowCard.vue';
 import { useShowCatalog } from '@/composables/useShowCatalog';
 import { useSearchLoading } from '@/composables/useSearchLoading';
 import { useParallaxBackground } from '@/composables/useParallaxBackground';
+import { useWatchlistStore } from '@/stores/watchlist';
+import { useRecentlyViewedStore } from '@/stores/recentlyViewed';
 import type { TVMazeShow } from '@/types/tvmaze';
 
 const props = defineProps<{
@@ -21,6 +23,8 @@ const emit = defineEmits<{
 const router = useRouter();
 const { loadShows, genreCollections, isLoading, error, searchShows, allShows } = useShowCatalog();
 const { setSearching } = useSearchLoading();
+const watchlistStore = useWatchlistStore();
+const recentlyViewedStore = useRecentlyViewedStore();
 
 const searchResults = ref<TVMazeShow[]>([]);
 const searchError = ref<string | null>(null);
@@ -29,6 +33,17 @@ let activeController: AbortController | null = null;
 
 const featuredShow = ref<TVMazeShow | null>(null);
 const topWatchShows = ref<TVMazeShow[]>([]);
+const watchlistShows = computed(() => {
+  if (!watchlistStore.pinnedIds.length) {
+    return [] as TVMazeShow[];
+  }
+  const lookup = new Map(allShows.value.map((show) => [show.id, show]));
+  return watchlistStore.pinnedIds
+    .map((id) => lookup.get(id))
+    .filter((show): show is TVMazeShow => !!show);
+});
+
+const recentlyViewedShows = computed(() => recentlyViewedStore.items);
 
 const isShowingResults = computed(() => !!props.searchQuery.trim());
 
@@ -270,6 +285,49 @@ function handleHeroMoreInfo() {
       </div>
     </section>
 
+    <section v-if="recentlyViewedShows.length" class="page-section recently-viewed">
+      <header class="section-header">
+        <h2>Continue Browsing</h2>
+        <p>Jump back into shows you viewed recently.</p>
+      </header>
+      <div class="card-rail" role="list">
+        <div
+          v-for="show in recentlyViewedShows"
+          :key="show.id"
+          role="listitem"
+          class="card-rail__item"
+        >
+          <div class="recent-card">
+            <ShowCard :show="show" />
+            <button
+              type="button"
+              class="recent-card__remove"
+              @click="recentlyViewedStore.remove(show.id)"
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section v-if="watchlistShows.length" class="page-section watchlist">
+      <header class="section-header">
+        <h2>Your Watchlist</h2>
+        <p>Shows you pinned for later.</p>
+      </header>
+      <div class="card-rail" role="list">
+        <div
+          v-for="show in watchlistShows"
+          :key="show.id"
+          role="listitem"
+          class="card-rail__item"
+        >
+          <ShowCard :show="show" />
+        </div>
+      </div>
+    </section>
+
     <section v-if="isShowingResults" class="page-section">
       <header class="section-header">
         <h2>Search Results</h2>
@@ -422,6 +480,34 @@ function handleHeroMoreInfo() {
 
 .top-watch__rail {
   padding-bottom: 0.75rem;
+}
+
+.recent-card {
+  position: relative;
+  display: grid;
+}
+
+.recent-card__remove {
+  position: absolute;
+  top: 0.6rem;
+  left: 0.6rem;
+  z-index: 2;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(16, 8, 24, 0.75);
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+.recent-card__remove:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(30, 16, 44, 0.85);
 }
 
 .top-watch__item {

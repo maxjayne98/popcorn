@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { RouterLink } from 'vue-router';
 import type { TVMazeShow } from '@/types/tvmaze';
 import { useParallaxBackground } from '@/composables/useParallaxBackground';
+import { useWatchlistStore } from '@/stores/watchlist';
 
 const props = defineProps<{
   show: TVMazeShow;
@@ -14,6 +15,14 @@ const premiereYear = computed(() => (props.show.premiered ? new Date(props.show.
 const networkLabel = computed(() => props.show.network?.name ?? props.show.language ?? 'Uncategorized');
 const { parallaxStyle: posterParallaxStyle, onMouseEnter, onMouseLeave, onMouseMove } =
   useParallaxBackground({ range: 14 });
+const watchlist = useWatchlistStore();
+const isPinned = computed(() => watchlist.isPinned(props.show.id));
+
+function toggleWatchlist(event: MouseEvent) {
+  event.preventDefault();
+  event.stopPropagation();
+  watchlist.toggle(props.show.id);
+}
 </script>
 
 <template>
@@ -25,6 +34,16 @@ const { parallaxStyle: posterParallaxStyle, onMouseEnter, onMouseLeave, onMouseM
     @mouseleave="onMouseLeave"
     @mousemove="onMouseMove"
   >
+    <button
+      type="button"
+      class="show-card__pin"
+      :aria-pressed="isPinned"
+      :title="isPinned ? 'Remove from watchlist' : 'Add to watchlist'"
+      @click="toggleWatchlist"
+      :aria-label="isPinned ? 'Remove from watchlist' : 'Add to watchlist'"
+    >
+      <span aria-hidden="true">{{ isPinned ? '★' : '☆' }}</span>
+    </button>
     <div class="show-card__poster" :style="posterParallaxStyle">
       <img v-if="imageSrc" :alt="`${show.name} poster`" :src="imageSrc" loading="lazy" />
       <div v-else class="show-card__poster-placeholder" aria-hidden="true">
@@ -62,6 +81,37 @@ const { parallaxStyle: posterParallaxStyle, onMouseEnter, onMouseLeave, onMouseM
   color: inherit;
   transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease,
     background-position 220ms ease;
+}
+
+.show-card__pin {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(18, 8, 26, 0.72);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: transform 150ms ease, border-color 150ms ease, background 150ms ease, color 150ms ease;
+}
+
+.show-card__pin:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 215, 0, 0.9);
+}
+
+.show-card__pin[aria-pressed='true'] {
+  background: rgba(255, 215, 0, 0.12);
+  border-color: rgba(255, 215, 0, 0.65);
+  color: rgba(255, 215, 0, 0.95);
 }
 
 .show-card:hover {

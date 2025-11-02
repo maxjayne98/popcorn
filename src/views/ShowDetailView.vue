@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useShowCatalog } from '@/composables/useShowCatalog';
+import { useRecentlyViewedStore } from '@/stores/recentlyViewed';
 import type { TVMazeShow } from '@/types/tvmaze';
 
 const props = defineProps<{
@@ -10,6 +11,7 @@ const props = defineProps<{
 
 const router = useRouter();
 const { ensureShow } = useShowCatalog();
+const recentlyViewed = useRecentlyViewedStore();
 
 const show = ref<TVMazeShow | null>(null);
 const isLoading = ref(true);
@@ -52,6 +54,7 @@ async function loadShowDetails(identifier: string) {
     show.value = null;
   } else {
     show.value = result;
+    recentlyViewed.add(result);
   }
   isLoading.value = false;
 }

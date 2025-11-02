@@ -1,9 +1,11 @@
 /// <reference types="vitest" />
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { mount, RouterLinkStub } from '@vue/test-utils';
+import { createPinia, setActivePinia } from 'pinia';
 import ShowCard from '@/components/ShowCard.vue';
 import type { TVMazeShow } from '@/types/tvmaze';
+import { useWatchlistStore } from '@/stores/watchlist';
 
 function createShow(overrides: Partial<TVMazeShow> = {}): TVMazeShow {
   const base: TVMazeShow = {
@@ -42,6 +44,10 @@ function createShow(overrides: Partial<TVMazeShow> = {}): TVMazeShow {
 }
 
 describe('ShowCard', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+  });
+
   it('renders poster image and formatted rating', () => {
     const wrapper = mount(ShowCard, {
       props: { show: createShow() },
@@ -88,5 +94,23 @@ describe('ShowCard', () => {
 
     expect(wrapper.getComponent(RouterLinkStub).find('.show-card__meta').text()).toContain('Spanish');
     expect(wrapper.find('.show-card__badge').exists()).toBe(false);
+  });
+
+  it('toggles watchlist when pin button is pressed', async () => {
+    const show = createShow({ id: 42 });
+    const wrapper = mount(ShowCard, {
+      props: { show },
+      global: {
+        stubs: { RouterLink: RouterLinkStub },
+      },
+    });
+
+    const pin = wrapper.find('.show-card__pin');
+    expect(pin.attributes('aria-pressed')).toBe('false');
+
+    await pin.trigger('click');
+    const store = useWatchlistStore();
+    expect(store.isPinned(42)).toBe(true);
+    expect(wrapper.find('.show-card__pin').attributes('aria-pressed')).toBe('true');
   });
 });

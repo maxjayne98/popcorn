@@ -7,6 +7,8 @@ import { setActivePinia, createPinia } from 'pinia';
 import HomeView from '@/views/HomeView.vue';
 import type { TVMazeShow, SearchResult } from '@/types/tvmaze';
 import { useSearchLoadingStore } from '@/stores/searchLoading';
+import { useWatchlistStore } from '@/stores/watchlist';
+import { useRecentlyViewedStore } from '@/stores/recentlyViewed';
 
 let allShowsRef: Ref<TVMazeShow[]>;
 let genreCollectionsRef: Ref<Array<{ genre: string; shows: TVMazeShow[] }>>;
@@ -17,6 +19,8 @@ let ensureShowMock: ReturnType<typeof vi.fn>;
 let searchShowsMock: ReturnType<typeof vi.fn>;
 let routerMock: { push: ReturnType<typeof vi.fn>; };
 let searchStore: ReturnType<typeof useSearchLoadingStore>;
+let watchlistStore: ReturnType<typeof useWatchlistStore>;
+let recentlyViewedStore: ReturnType<typeof useRecentlyViewedStore>;
 
 vi.mock('@/composables/useShowCatalog', () => ({
   useShowCatalog: () => ({
@@ -140,6 +144,10 @@ describe('HomeView', () => {
     setActivePinia(createPinia());
     searchStore = useSearchLoadingStore();
     searchStore.$reset();
+    watchlistStore = useWatchlistStore();
+    watchlistStore.clear();
+    recentlyViewedStore = useRecentlyViewedStore();
+    recentlyViewedStore.clear();
 
     vi.spyOn(Math, 'random').mockReturnValue(0);
   });
@@ -231,6 +239,61 @@ describe('HomeView', () => {
     expect(resultsStub.exists()).toBe(true);
     expect(resultsStub.text()).toContain('Search Hit');
     expect(resultsStub.text()).toContain('Secondary');
+  });
+
+  it('displays watchlist rail when shows are pinned', async () => {
+    const watchlistShow = createShow({ id: 77, name: 'Pinned' });
+    allShowsRef.value = [watchlistShow];
+    genreCollectionsRef.value = [];
+    watchlistStore.add(77);
+
+    const wrapper = mount(HomeView, {
+      props: { searchQuery: '' },
+      global: {
+        stubs: {
+          ShowCard: ShowCardStub,
+          GenreRail: GenreRailStub,
+          SearchResultsList: SearchResultsListStub,
+        },
+      },
+    });
+
+    await flushPromises();
+
+    const watchlistHeader = wrapper.find('.watchlist .section-header h2');
+    expect(watchlistHeader.text()).toBe('Your Watchlist');
+    const watchlistItems = wrapper.findAll('.watchlist .show-card-stub');
+    expect(watchlistItems).toHaveLength(1);
+    expect(watchlistItems[0]?.text()).toBe('Pinned');
+  });
+
+  it('shows recently viewed rail when items exist', async () => {
+    const recentShow = createShow({ id: 88, name: 'Recently Seen' });
+    recentlyViewedStore.add(recentShow);
+    allShowsRef.value = [recentShow];
+    genreCollectionsRef.value = [];
+
+    const wrapper = mount(HomeView, {
+      props: { searchQuery: '' },
+      global: {
+        stubs: {
+          ShowCard: ShowCardStub,
+          GenreRail: GenreRailStub,
+          SearchResultsList: SearchResultsListStub,
+        },
+      },
+    });
+
+    await flushPromises();
+
+    const heading = wrapper.find('.recently-viewed .section-header h2');
+    expect(heading.text()).toBe('Continue Browsing');
+    const cards = wrapper.findAll('.recently-viewed .show-card-stub');
+    expect(cards).toHaveLength(1);
+    expect(cards[0]?.text()).toBe('Recently Seen');
+
+    await wrapper.find('.recent-card__remove').trigger('click');
+    expect(recentlyViewedStore.items.length).toBe(0);
   });
 
   it('surfaces search errors when the request fails', async () => {

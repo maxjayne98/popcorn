@@ -2,6 +2,8 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { flushPromises, mount, RouterLinkStub } from '@vue/test-utils';
+import { createPinia, setActivePinia } from 'pinia';
+import { useRecentlyViewedStore } from '@/stores/recentlyViewed';
 import ShowDetailView from '@/views/ShowDetailView.vue';
 
 const ensureShow = vi.fn<(id: number) => Promise<any>>();
@@ -23,6 +25,8 @@ vi.mock('vue-router', () => ({
 }));
 
 beforeEach(() => {
+  setActivePinia(createPinia());
+  useRecentlyViewedStore().clear();
   ensureShow.mockReset();
   back.mockReset();
   push.mockReset();
@@ -74,6 +78,8 @@ describe('ShowDetailView', () => {
   it('renders show details when data is available', async () => {
     const show = createShow();
     ensureShow.mockResolvedValue(show);
+    const store = useRecentlyViewedStore();
+    const addSpy = vi.spyOn(store, 'add');
 
     const wrapper = mountView('7');
     await flushPromises();
@@ -83,6 +89,7 @@ describe('ShowDetailView', () => {
     expect(wrapper.find('.show-detail__meta').text()).toContain('Monday, Thursday at 21:00');
     expect(wrapper.find('.show-detail__meta').text()).toContain('HBO (USA)');
     expect(wrapper.find('img[alt="My Show poster"]').attributes('src')).toBe(show.image.medium);
+    expect(addSpy).toHaveBeenCalledWith(show);
   });
 
   it('shows placeholder when poster is missing', async () => {
