@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { RouterLink } from 'vue-router';
 import type { TVMazeShow } from '@/types/tvmaze';
+import { useParallaxBackground } from '@/composables/useParallaxBackground';
 
 const props = defineProps<{
   show: TVMazeShow;
@@ -15,6 +16,8 @@ const summaryText = computed(() =>
     ? props.show.summary.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
     : ''
 );
+const { parallaxStyle: posterParallaxStyle, onMouseEnter, onMouseLeave, onMouseMove } =
+  useParallaxBackground({ range: 10 });
 </script>
 
 <template>
@@ -22,8 +25,11 @@ const summaryText = computed(() =>
     :to="{ name: 'show-details', params: { id: show.id } }"
     class="show-list-item"
     :aria-label="`View details for ${show.name}`"
+    @mouseenter="onMouseEnter"
+    @mouseleave="onMouseLeave"
+    @mousemove="onMouseMove"
   >
-    <div class="show-list-item__poster">
+    <div class="show-list-item__poster" :style="posterParallaxStyle">
       <img v-if="poster" :src="poster" :alt="`${show.name} poster`" loading="lazy" />
       <div v-else class="show-list-item__poster-placeholder" aria-hidden="true">
         {{ show.name.charAt(0).toUpperCase() }}
@@ -49,7 +55,7 @@ const summaryText = computed(() =>
   gap: 1rem;
   padding: 0.85rem 1rem;
   border-radius: 1rem;
-  background: rgba(42, 8, 14, 0.92);
+  background: linear-gradient(135deg, rgba(42, 8, 14, 0.95), rgba(24, 4, 10, 0.88));
   border: 1px solid rgba(255, 255, 255, 0.08);
   color: inherit;
   text-decoration: none;
@@ -68,6 +74,14 @@ const summaryText = computed(() =>
   overflow: hidden;
   aspect-ratio: 2 / 3;
   background: linear-gradient(145deg, rgba(68, 12, 20, 0.9), rgba(32, 6, 12, 0.92));
+  transition: transform 200ms ease;
+  transform: translate(
+    calc(var(--parallax-shift-x, 0px) * 0.25),
+    calc(var(--parallax-shift-y, 0px) * 0.25)
+  );
+  background-size: 150% 150%;
+  background-position: calc(50% + var(--parallax-shift-x, 0px))
+    calc(50% + var(--parallax-shift-y, 0px));
 }
 
 .show-list-item__poster img {

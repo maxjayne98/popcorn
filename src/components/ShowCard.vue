@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { RouterLink } from 'vue-router';
 import type { TVMazeShow } from '@/types/tvmaze';
+import { useParallaxBackground } from '@/composables/useParallaxBackground';
 
 const props = defineProps<{
   show: TVMazeShow;
@@ -11,6 +12,8 @@ const imageSrc = computed(() => props.show.image?.medium ?? props.show.image?.or
 const averageRating = computed(() => props.show.rating?.average ?? null);
 const premiereYear = computed(() => (props.show.premiered ? new Date(props.show.premiered).getFullYear() : null));
 const networkLabel = computed(() => props.show.network?.name ?? props.show.language ?? 'Uncategorized');
+const { parallaxStyle: posterParallaxStyle, onMouseEnter, onMouseLeave, onMouseMove } =
+  useParallaxBackground({ range: 14 });
 </script>
 
 <template>
@@ -18,8 +21,11 @@ const networkLabel = computed(() => props.show.network?.name ?? props.show.langu
     :to="{ name: 'show-details', params: { id: show.id } }"
     class="show-card"
     :aria-label="`View details for ${show.name}`"
+    @mouseenter="onMouseEnter"
+    @mouseleave="onMouseLeave"
+    @mousemove="onMouseMove"
   >
-    <div class="show-card__poster">
+    <div class="show-card__poster" :style="posterParallaxStyle">
       <img v-if="imageSrc" :alt="`${show.name} poster`" :src="imageSrc" loading="lazy" />
       <div v-else class="show-card__poster-placeholder" aria-hidden="true">
         <span>{{ show.name.charAt(0).toUpperCase() }}</span>
@@ -50,11 +56,12 @@ const networkLabel = computed(() => props.show.network?.name ?? props.show.langu
   min-width: 200px;
   border-radius: 1rem;
   overflow: hidden;
-  background: rgba(38, 8, 14, 0.9);
+  background: linear-gradient(145deg, rgba(38, 8, 14, 0.92), rgba(18, 6, 10, 0.85));
   border: 1px solid rgba(255, 255, 255, 0.08);
   text-decoration: none;
   color: inherit;
-  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease,
+    background-position 220ms ease;
 }
 
 .show-card:hover {
@@ -68,6 +75,14 @@ const networkLabel = computed(() => props.show.network?.name ?? props.show.langu
   aspect-ratio: 2 / 3;
   overflow: hidden;
   background: linear-gradient(145deg, rgba(68, 12, 20, 0.9), rgba(32, 6, 12, 0.92));
+  transition: transform 200ms ease;
+  transform: translate(
+    calc(var(--parallax-shift-x, 0px) * 0.25),
+    calc(var(--parallax-shift-y, 0px) * 0.25)
+  );
+  background-size: 140% 140%;
+  background-position: calc(50% + var(--parallax-shift-x, 0px))
+    calc(50% + var(--parallax-shift-y, 0px));
 }
 
 .show-card__poster img {
@@ -103,6 +118,11 @@ const networkLabel = computed(() => props.show.network?.name ?? props.show.langu
   display: grid;
   gap: 0.5rem;
   padding: 0.85rem 1rem 1rem;
+  transition: transform 200ms ease;
+  transform: translate(
+    calc(var(--parallax-shift-x, 0px) * 0.15),
+    calc(var(--parallax-shift-y, 0px) * 0.15)
+  );
 }
 
 .show-card__title {

@@ -7,6 +7,7 @@ import SearchResultsList from '@/components/SearchResultsList.vue';
 import ShowCard from '@/components/ShowCard.vue';
 import { useShowCatalog } from '@/composables/useShowCatalog';
 import { useSearchLoading } from '@/composables/useSearchLoading';
+import { useParallaxBackground } from '@/composables/useParallaxBackground';
 import type { TVMazeShow } from '@/types/tvmaze';
 
 const props = defineProps<{
@@ -39,16 +40,23 @@ const heroSubtitle = computed(() => {
   return `Browsing ${totalShows} shows across ${genreCollections.value.length} genres.`;
 });
 
+const {
+  parallaxStyle: heroParallaxStyle,
+  onMouseEnter: handleHeroMouseEnter,
+  onMouseLeave: handleHeroMouseLeave,
+  onMouseMove: handleHeroMouseMove,
+} = useParallaxBackground({ range: 32 });
+
 const featuredBackdropStyle = computed(() => {
+  const baseStyle = { ...heroParallaxStyle.value };
   if (!featuredShow.value) {
-    return {};
+    return baseStyle;
   }
   const image = featuredShow.value.image?.original ?? featuredShow.value.image?.medium;
-  return image
-    ? {
-        backgroundImage: `linear-gradient(135deg, rgba(8, 9, 15, 0.9) 10%, rgba(8, 9, 15, 0.15) 70%), url('${image}')`,
-      }
-    : {};
+  if (image) {
+    baseStyle.backgroundImage = `linear-gradient(135deg, rgba(8, 9, 15, 0.9) 10%, rgba(8, 9, 15, 0.15) 70%), url('${image}')`;
+  }
+  return baseStyle;
 });
 
 const featuredSummary = computed(() => {
@@ -217,7 +225,12 @@ function handleHeroMoreInfo() {
 <template>
   <div class="page-container">
     <section v-if="featuredShow" class="hero" :style="featuredBackdropStyle">
-      <div class="hero__overlay">
+      <div
+        class="hero__overlay"
+        @mousemove="handleHeroMouseMove"
+        @mouseleave="handleHeroMouseLeave"
+        @mouseenter="handleHeroMouseEnter"
+      >
         <div class="hero__content">
           <p class="hero__eyebrow">Featured Spotlight</p>
           <h1>{{ featuredShow.name }}</h1>
@@ -306,9 +319,12 @@ function handleHeroMoreInfo() {
   border-radius: 1.5rem;
   overflow: hidden;
   background: linear-gradient(135deg, rgba(26, 4, 8, 0.88), rgba(8, 1, 3, 0.4));
-  background-size: cover;
-  background-position: center;
+  background-size: cover, cover;
+  background-position:
+    calc(50% + var(--parallax-shift-x, 0px)) calc(50% + var(--parallax-shift-y, 0px)),
+    calc(50% + var(--parallax-shift-x, 0px)) calc(50% + var(--parallax-shift-y, 0px));
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+  transition: background-position 180ms ease;
 }
 
 .hero__overlay {
