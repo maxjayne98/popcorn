@@ -10,6 +10,8 @@ import { useSearchLoading } from '@/composables/useSearchLoading';
 import { useParallaxBackground } from '@/composables/useParallaxBackground';
 import { useWatchlistStore } from '@/stores/watchlist';
 import { useRecentlyViewedStore } from '@/stores/recentlyViewed';
+import { useSearchCollectionsStore } from '@/stores/searchCollections';
+import type { SavedSearch } from '@/stores/searchCollections';
 import type { TVMazeShow } from '@/types/tvmaze';
 
 const props = defineProps<{
@@ -25,11 +27,21 @@ const { loadShows, genreCollections, isLoading, error, searchShows, allShows } =
 const { setSearching } = useSearchLoading();
 const watchlistStore = useWatchlistStore();
 const recentlyViewedStore = useRecentlyViewedStore();
+const searchCollectionsStore = useSearchCollectionsStore();
 
 const searchResults = ref<TVMazeShow[]>([]);
 const searchError = ref<string | null>(null);
 const isSearching = ref(false);
 let activeController: AbortController | null = null;
+
+type RuntimeFilter = 'all' | 'short' | 'medium' | 'long';
+const runtimeFilter = ref<RuntimeFilter>('all');
+const languageFilter = ref('all');
+const networkFilter = ref('all');
+
+const searchMinRating = ref(0);
+const savedSearchLabel = ref('');
+const lastSearchResults = ref<TVMazeShow[]>([]);
 
 const featuredShow = ref<TVMazeShow | null>(null);
 const topWatchShows = ref<TVMazeShow[]>([]);
@@ -44,6 +56,88 @@ const watchlistShows = computed(() => {
 });
 
 const recentlyViewedShows = computed(() => recentlyViewedStore.items);
+const savedSearches = computed(() => searchCollectionsStore.entries);
+
+
+const runtimeOptions = [
+  { value: 'all', label: 'Any runtime' },
+  { value: 'short', label: '< 30 min' },
+  { value: 'medium', label: '30-60 min' },
+  { value: 'long', label: '> 60 min' },
+];
+
+const languageOptions = computed(() => {
+  const set = new Set<string>();
+  for (const show of allShows.value) {
+    if (show.language) {
+      set.add(show.language);
+    }
+  }
+  return ['all', ...Array.from(set).sort((a, b) => a.localeCompare(b))];
+});
+
+const networkOptions = computed(() => {
+  const set = new Set<string>();
+  for (const show of allShows.value) {
+    if (show.network?.name) {
+      set.add(show.network.name);
+    }
+  }
+  return ['all', ...Array.from(set).sort((a, b) => a.localeCompare(b))];
+});
+
+function matchesFilters(show: TVMazeShow) {
+  const runtime = show.runtime ?? 0;
+  if (runtimeFilter.value === 'short' && runtime >= 30) {
+    return false;
+  }
+  if (runtimeFilter.value === 'medium' && (runtime < 30 || runtime > 60)) {
+    return false;
+  }
+  if (runtimeFilter.value === 'long' && runtime <= 60) {
+    return false;
+  }
+
+  if (languageFilter.value !== 'all' && show.language !== languageFilter.value) {
+    return false;
+  }
+
+  if (networkFilter.value !== 'all') {
+    const networkName = show.network?.name ?? '';
+    if (networkName !== networkFilter.value) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+const filteredTopWatchShows = computed(() => topWatchShows.value.filter(matchesFilters));
+
+const filteredGenreCollections = computed(() =>
+  genreCollections.value
+    .map((collection) => ({
+      genre: collection.genre,
+      shows: collection.shows.filter(matchesFilters),
+    }))
+    .filter((collection) => collection.shows.length)
+);
+
+const heroGenreChips = computed(() => {
+  const set = new Set<string>();
+  for (const show of filteredTopWatchShows.value) {
+    for (const genre of show.genres) {
+      set.add(genre);
+      if (set.size >= 6) {
+        break;
+      }
+    }
+    if (set.size >= 6) {
+      break;
+    }
+  }
+  return Array.from(set).sort((a, b) => a.localeCompare(b));
+});
 
 const isShowingResults = computed(() => !!props.searchQuery.trim());
 
@@ -145,6 +239,7 @@ async function performSearch(query: string) {
 
   if (!normalized) {
     searchResults.value = [];
+    lastSearchResults.value = [];
     setSearching(false);
     isSearching.value = false;
     emit('update-search', '');
@@ -165,7 +260,7 @@ async function performSearch(query: string) {
     for (const entry of results) {
       uniqueShows.set(entry.show.id, entry.show);
     }
-    searchResults.value = [...uniqueShows.values()].sort((a, b) => {
+    lastSearchResults.value = [...uniqueShows.values()].sort((a, b) => {
       const ratingA = a.rating?.average ?? 0;
       const ratingB = b.rating?.average ?? 0;
       if (ratingA === ratingB) {
@@ -173,6 +268,7 @@ async function performSearch(query: string) {
       }
       return ratingB - ratingA;
     });
+    applySearchFilters();
   } catch (err) {
     if (controller.signal.aborted) {
       return;
@@ -187,6 +283,17 @@ async function performSearch(query: string) {
   }
 }
 
+function applySearchFilters() {
+  if (!lastSearchResults.value.length) {
+    searchResults.value = [];
+    return;
+  }
+  searchResults.value = lastSearchResults.value.filter((show) => {
+    const rating = show.rating?.average ?? 0;
+    return rating >= searchMinRating.value;
+  });
+}
+
 watch(
   () => props.searchQuery,
   (query) => {
@@ -194,6 +301,10 @@ watch(
   },
   { immediate: true }
 );
+
+watch(searchMinRating, () => {
+  applySearchFilters();
+});
 
 onMounted(() => {
   ensureShowsLoaded();
@@ -235,6 +346,33 @@ function handleHeroMoreInfo() {
   }
   router.push({ name: 'show-details', params: { id: featuredShow.value.id } });
 }
+
+function focusHeroByGenre(genre: string) {
+  const candidate = topWatchShows.value.find((show) => show.genres.includes(genre));
+  if (candidate) {
+    featuredShow.value = candidate;
+  }
+}
+
+function saveCurrentSearch() {
+  const query = props.searchQuery.trim();
+  if (!query) {
+    searchError.value = 'Enter a search term before saving.';
+    return;
+  }
+  const label = savedSearchLabel.value.trim() || `Search: ${query}`;
+  searchCollectionsStore.add(label, query, searchMinRating.value);
+  savedSearchLabel.value = '';
+}
+
+function applySavedSearch(entry: SavedSearch) {
+  searchMinRating.value = entry.minRating;
+  emit('update-search', entry.query);
+}
+
+function removeSavedSearch(id: string) {
+  searchCollectionsStore.remove(id);
+}
 </script>
 
 <template>
@@ -264,6 +402,17 @@ function handleHeroMoreInfo() {
             </button>
           </div>
           <p class="hero__subtitle">{{ heroSubtitle }}</p>
+          <div v-if="heroGenreChips.length" class="hero__chips">
+            <button
+              v-for="chip in heroGenreChips"
+              :key="chip"
+              type="button"
+              class="hero__chip"
+              @click="focusHeroByGenre(chip)"
+            >
+              {{ chip }}
+            </button>
+          </div>
         </div>
       </div>
     </section>
@@ -273,9 +422,36 @@ function handleHeroMoreInfo() {
         <h2>Top Picks For You</h2>
         <p>Curated from the highest-rated shows right now.</p>
       </header>
-      <div class="card-rail top-watch__rail" role="list">
+      <div class="top-watch__filters">
+        <label>
+          <span>Runtime</span>
+          <select v-model="runtimeFilter">
+            <option v-for="option in runtimeOptions" :key="option.value" :value="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+        </label>
+        <label>
+          <span>Language</span>
+          <select v-model="languageFilter">
+            <option v-for="option in languageOptions" :key="option" :value="option">
+              {{ option === 'all' ? 'Any language' : option }}
+            </option>
+          </select>
+        </label>
+        <label>
+          <span>Network</span>
+          <select v-model="networkFilter">
+            <option v-for="option in networkOptions" :key="option" :value="option">
+              {{ option === 'all' ? 'Any network' : option }}
+            </option>
+          </select>
+        </label>
+      </div>
+      <p v-if="!filteredTopWatchShows.length" class="state">No picks match the selected filters yet.</p>
+      <div v-else class="card-rail top-watch__rail" role="list">
         <div
-          v-for="show in topWatchShows"
+          v-for="show in filteredTopWatchShows"
           :key="show.id"
           role="listitem"
           class="card-rail__item top-watch__item"
@@ -283,6 +459,23 @@ function handleHeroMoreInfo() {
           <ShowCard :show="show" />
         </div>
       </div>
+    </section>
+
+    <section v-if="savedSearches.length" class="page-section saved-searches">
+      <header class="section-header">
+        <h2>Saved Searches</h2>
+        <p>Quick shortcuts for your favourite queries.</p>
+      </header>
+      <ul class="saved-searches__list">
+        <li v-for="entry in savedSearches" :key="entry.id">
+          <button type="button" @click="applySavedSearch(entry)">
+            {{ entry.label }} (min ⭐ {{ entry.minRating.toFixed(1) }})
+          </button>
+          <button type="button" class="saved-searches__remove" @click="removeSavedSearch(entry.id)">
+            Remove
+          </button>
+        </li>
+      </ul>
     </section>
 
     <section v-if="recentlyViewedShows.length" class="page-section recently-viewed">
@@ -337,6 +530,22 @@ function handleHeroMoreInfo() {
           <span v-else-if="searchResults.length">({{ searchResults.length }} results)</span>
         </p>
       </header>
+      <div class="search-tools">
+        <label class="search-tools__rating">
+          <span>Minimum rating</span>
+          <input type="range" min="0" max="10" step="0.5" v-model.number="searchMinRating" />
+          <span class="search-tools__value">⭐ {{ searchMinRating.toFixed(1) }}</span>
+        </label>
+        <div class="search-tools__save">
+          <input
+            v-model="savedSearchLabel"
+            type="text"
+            placeholder="Label this search"
+            aria-label="Saved search label"
+          />
+          <button type="button" @click="saveCurrentSearch">Save Search</button>
+        </div>
+      </div>
       <p v-if="searchError" class="state state--error">
         {{ searchError }}
       </p>
@@ -354,11 +563,11 @@ function handleHeroMoreInfo() {
       <template v-else>
         <div class="genre-grid">
           <GenreRail
-            v-for="collection in genreCollections"
-            :key="collection.genre"
-            :genre="collection.genre"
-            :shows="collection.shows"
-          />
+          v-for="collection in filteredGenreCollections"
+          :key="collection.genre"
+          :genre="collection.genre"
+          :shows="collection.shows"
+        />
         </div>
       </template>
     </section>
@@ -478,8 +687,56 @@ function handleHeroMoreInfo() {
   font-size: 0.95rem;
 }
 
+.hero__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+}
+
+.hero__chip {
+  padding: 0.3rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(18, 8, 26, 0.65);
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+.hero__chip:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(32, 18, 46, 0.75);
+}
+
 .top-watch__rail {
   padding-bottom: 0.75rem;
+}
+
+.top-watch__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.top-watch__filters label {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.top-watch__filters select {
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(20, 12, 28, 0.85);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .recent-card {
@@ -508,6 +765,89 @@ function handleHeroMoreInfo() {
   transform: translateY(-2px);
   border-color: rgba(255, 255, 255, 0.5);
   background: rgba(30, 16, 44, 0.85);
+}
+
+.search-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.search-tools__rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.search-tools__rating input[type='range'] {
+  accent-color: var(--accent-color, #ff2d55);
+}
+
+.search-tools__value {
+  font-weight: 600;
+  color: rgba(255, 215, 0, 0.9);
+}
+
+.search-tools__save {
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.search-tools__save input {
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(20, 12, 28, 0.75);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.search-tools__save button {
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(26, 6, 22, 0.85);
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  transition: transform 150ms ease, border-color 150ms ease;
+}
+
+.search-tools__save button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.saved-searches__list {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.saved-searches__list li {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.saved-searches__list button {
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(18, 10, 26, 0.75);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.saved-searches__remove {
+  background: rgba(255, 55, 95, 0.18) !important;
+  border-color: rgba(255, 55, 95, 0.4) !important;
+  color: rgba(255, 175, 185, 0.9) !important;
 }
 
 .top-watch__item {

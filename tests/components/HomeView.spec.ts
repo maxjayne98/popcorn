@@ -9,6 +9,7 @@ import type { TVMazeShow, SearchResult } from '@/types/tvmaze';
 import { useSearchLoadingStore } from '@/stores/searchLoading';
 import { useWatchlistStore } from '@/stores/watchlist';
 import { useRecentlyViewedStore } from '@/stores/recentlyViewed';
+import { useSearchCollectionsStore } from '@/stores/searchCollections';
 
 let allShowsRef: Ref<TVMazeShow[]>;
 let genreCollectionsRef: Ref<Array<{ genre: string; shows: TVMazeShow[] }>>;
@@ -21,6 +22,7 @@ let routerMock: { push: ReturnType<typeof vi.fn>; };
 let searchStore: ReturnType<typeof useSearchLoadingStore>;
 let watchlistStore: ReturnType<typeof useWatchlistStore>;
 let recentlyViewedStore: ReturnType<typeof useRecentlyViewedStore>;
+let searchCollectionsStore: ReturnType<typeof useSearchCollectionsStore>;
 
 vi.mock('@/composables/useShowCatalog', () => ({
   useShowCatalog: () => ({
@@ -148,6 +150,8 @@ describe('HomeView', () => {
     watchlistStore.clear();
     recentlyViewedStore = useRecentlyViewedStore();
     recentlyViewedStore.clear();
+    searchCollectionsStore = useSearchCollectionsStore();
+    searchCollectionsStore.clear();
 
     vi.spyOn(Math, 'random').mockReturnValue(0);
   });

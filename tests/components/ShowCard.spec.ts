@@ -1,6 +1,6 @@
 /// <reference types="vitest" />
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mount, RouterLinkStub } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import ShowCard from '@/components/ShowCard.vue';
@@ -44,8 +44,25 @@ function createShow(overrides: Partial<TVMazeShow> = {}): TVMazeShow {
 }
 
 describe('ShowCard', () => {
+  const originalShare = navigator.share;
+  const originalClipboard = navigator.clipboard;
+  let openSpy: ReturnType<typeof vi.spyOn>;
+
   beforeEach(() => {
     setActivePinia(createPinia());
+    Object.assign(navigator, {
+      share: undefined,
+      clipboard: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    });
+    openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
+  });
+
+  afterEach(() => {
+    navigator.share = originalShare;
+    navigator.clipboard = originalClipboard;
+    openSpy.mockRestore();
   });
 
   it('renders poster image and formatted rating', () => {
@@ -112,5 +129,28 @@ describe('ShowCard', () => {
     const store = useWatchlistStore();
     expect(store.isPinned(42)).toBe(true);
     expect(wrapper.find('.show-card__pin').attributes('aria-pressed')).toBe('true');
+  });
+
+  it('copies link when share API is unavailable', async () => {
+    const show = createShow({ id: 55 });
+    const wrapper = mount(ShowCard, {
+      props: { show },
+      global: {
+        stubs: { RouterLink: RouterLinkStub },
+      },
+    });
+
+    await wrapper.find('.show-card__share').trigger('click');
+    expect(navigator.clipboard?.writeText).toHaveBeenCalledWith(expect.stringContaining('/shows/55'));
+  });
+
+  it('opens a tweet intent when tweet button is clicked', async () => {
+    const wrapper = mount(ShowCard, {
+      props: { show: createShow({ id: 99, name: 'Tweetable' }) },
+      global: { stubs: { RouterLink: RouterLinkStub } },
+    });
+
+    await wrapper.find('.show-card__tweet').trigger('click');
+    expect(openSpy).toHaveBeenCalledWith(expect.stringContaining('twitter.com/intent/tweet'), '_blank', 'noopener');
   });
 });

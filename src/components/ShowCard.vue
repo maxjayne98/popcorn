@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import type { TVMazeShow } from '@/types/tvmaze';
 import { useParallaxBackground } from '@/composables/useParallaxBackground';
@@ -17,11 +17,66 @@ const { parallaxStyle: posterParallaxStyle, onMouseEnter, onMouseLeave, onMouseM
   useParallaxBackground({ range: 14 });
 const watchlist = useWatchlistStore();
 const isPinned = computed(() => watchlist.isPinned(props.show.id));
+const shareFeedback = ref('');
+let feedbackTimer: ReturnType<typeof setTimeout> | null = null;
 
 function toggleWatchlist(event: MouseEvent) {
   event.preventDefault();
   event.stopPropagation();
   watchlist.toggle(props.show.id);
+}
+
+async function shareShow(event: MouseEvent) {
+  event.preventDefault();
+  event.stopPropagation();
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const url = origin ? `${origin}/shows/${props.show.id}` : `/shows/${props.show.id}`;
+
+  try {
+    if (navigator?.share) {
+      await navigator.share({ title: props.show.name, url });
+      setShareFeedback('Shared!');
+      return;
+    }
+  } catch (error) {
+    console.warn('Share failed, falling back to copy', error);
+  }
+
+  try {
+    if (navigator?.clipboard?.writeText) {
+      await navigator.clipboard.writeText(url);
+      setShareFeedback('Link copied!');
+      return;
+    }
+  } catch (error) {
+    console.warn('Clipboard copy failed', error);
+  }
+
+  setShareFeedback('Share not supported');
+}
+
+function setShareFeedback(message: string) {
+  shareFeedback.value = message;
+  if (feedbackTimer) {
+    clearTimeout(feedbackTimer);
+  }
+  feedbackTimer = setTimeout(() => {
+    shareFeedback.value = '';
+    feedbackTimer = null;
+  }, 2000);
+}
+
+function tweetShow(event: MouseEvent) {
+  event.preventDefault();
+  event.stopPropagation();
+  if (typeof window === 'undefined') {
+    return;
+  }
+  const origin = window.location.origin;
+  const url = encodeURIComponent(`${origin}/shows/${props.show.id}`);
+  const text = encodeURIComponent(`Watching ${props.show.name}`);
+  const tweetUrl = `https://twitter.com/intent/tweet?text=${text}&url=${url}`;
+  window.open(tweetUrl, '_blank', 'noopener');
 }
 </script>
 
@@ -34,16 +89,34 @@ function toggleWatchlist(event: MouseEvent) {
     @mouseleave="onMouseLeave"
     @mousemove="onMouseMove"
   >
-    <button
-      type="button"
-      class="show-card__pin"
-      :aria-pressed="isPinned"
-      :title="isPinned ? 'Remove from watchlist' : 'Add to watchlist'"
-      @click="toggleWatchlist"
-      :aria-label="isPinned ? 'Remove from watchlist' : 'Add to watchlist'"
-    >
-      <span aria-hidden="true">{{ isPinned ? '★' : '☆' }}</span>
-    </button>
+    <div class="show-card__controls">
+      <button
+        type="button"
+        class="show-card__tweet"
+        :aria-label="`Tweet about ${show.name}`"
+        @click="tweetShow"
+      >
+        <span aria-hidden="true">🐦</span>
+      </button>
+      <button
+        type="button"
+        class="show-card__share"
+        :aria-label="`Share ${show.name}`"
+        @click="shareShow"
+      >
+        <span aria-hidden="true">⤴</span>
+      </button>
+      <button
+        type="button"
+        class="show-card__pin"
+        :aria-pressed="isPinned"
+        :aria-label="isPinned ? `Remove ${show.name} from watchlist` : `Add ${show.name} to watchlist`"
+        @click="toggleWatchlist"
+      >
+        <span aria-hidden="true">{{ isPinned ? '★' : '☆' }}</span>
+      </button>
+    </div>
+    <div v-if="shareFeedback" class="show-card__feedback">{{ shareFeedback }}</div>
     <div class="show-card__poster" :style="posterParallaxStyle">
       <img v-if="imageSrc" :alt="`${show.name} poster`" :src="imageSrc" loading="lazy" />
       <div v-else class="show-card__poster-placeholder" aria-hidden="true">
@@ -83,11 +156,18 @@ function toggleWatchlist(event: MouseEvent) {
     background-position 220ms ease;
 }
 
-.show-card__pin {
+.show-card__controls {
   position: absolute;
   top: 0.6rem;
   right: 0.6rem;
+  display: flex;
+  gap: 0.35rem;
   z-index: 2;
+}
+
+.show-card__tweet,
+.show-card__share,
+.show-card__pin {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -97,21 +177,45 @@ function toggleWatchlist(event: MouseEvent) {
   border: 1px solid rgba(255, 255, 255, 0.25);
   background: rgba(18, 8, 26, 0.72);
   color: rgba(255, 255, 255, 0.8);
-  font-size: 1.2rem;
+  font-size: 1.05rem;
   cursor: pointer;
   transition: transform 150ms ease, border-color 150ms ease, background 150ms ease, color 150ms ease;
 }
 
+.show-card__tweet:hover,
+.show-card__share:hover,
 .show-card__pin:hover {
   transform: translateY(-2px);
   border-color: rgba(255, 255, 255, 0.6);
-  color: rgba(255, 215, 0, 0.9);
+}
+
+.show-card__tweet:hover {
+  color: rgba(150, 210, 255, 0.9);
+}
+
+.show-card__share:hover {
+  color: rgba(180, 215, 255, 0.9);
 }
 
 .show-card__pin[aria-pressed='true'] {
   background: rgba(255, 215, 0, 0.12);
   border-color: rgba(255, 215, 0, 0.65);
   color: rgba(255, 215, 0, 0.95);
+}
+
+.show-card__feedback {
+  position: absolute;
+  top: 2.8rem;
+  right: 0.65rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 0.65rem;
+  background: rgba(18, 8, 26, 0.85);
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.7rem;
+  letter-spacing: 0.03em;
+  pointer-events: none;
+  z-index: 2;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
 }
 
 .show-card:hover {
