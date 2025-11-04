@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { RouterLink } from 'vue-router';
 import type { TVMazeShow } from '@/types/tvmaze';
 import { useParallaxBackground } from '@/composables/useParallaxBackground';
+import ImdbIcon from '@/components/icons/IMDB.vue';
 
 const props = defineProps<{
   show: TVMazeShow;
@@ -38,7 +39,10 @@ const { parallaxStyle: posterParallaxStyle, onMouseEnter, onMouseLeave, onMouseM
     <div class="show-list-item__body">
       <header>
         <h3>{{ show.name }}</h3>
-        <span v-if="rating" class="show-list-item__rating">⭐ {{ rating.toFixed(1) }}</span>
+        <span v-if="rating" class="show-list-item__rating">
+          <ImdbIcon aria-hidden="true" class="show-list-item__imdb" />
+          {{ rating.toFixed(1) }}
+        </span>
       </header>
       <p v-if="summaryText">{{ summaryText }}</p>
       <ul v-if="show.genres.length" class="show-list-item__genres">
@@ -121,12 +125,20 @@ const { parallaxStyle: posterParallaxStyle, onMouseEnter, onMouseLeave, onMouseM
 }
 
 .show-list-item__rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
   padding: 0.25rem 0.65rem;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.45);
-  color: #ffdd57;
+  background: rgba(0, 0, 0, 0.55);
+  color: rgba(255, 255, 255, 0.9);
   font-size: 0.8rem;
   font-weight: 600;
+}
+
+.show-list-item__imdb {
+  width: 1.3rem;
+  height: auto;
 }
 
 .show-list-item__body p {

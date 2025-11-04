@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
 import type { SavedSearch } from '@/stores/searchCollections';
+import ImdbIcon from '@/components/icons/IMDB.vue';
 
 const props = defineProps<{
   searches: readonly SavedSearch[];
@@ -36,7 +37,12 @@ function applySavedSearch(entry: SavedSearch) {
     <ul class="saved-searches__list">
       <li v-for="entry in searches" :key="entry.id">
         <button type="button" @click="applySavedSearch(entry)">
-          {{ entry.label }} (min ⭐ {{ entry.minRating.toFixed(1) }})
+          {{ entry.label }} (min
+          <span class="saved-searches__rating">
+            <ImdbIcon aria-hidden="true" />
+            {{ entry.minRating.toFixed(1) }}
+          </span>
+          )
         </button>
         <button type="button" class="saved-searches__remove" @click="emit('remove', entry.id)">
           Remove
@@ -93,10 +99,21 @@ function applySavedSearch(entry: SavedSearch) {
   cursor: pointer;
 }
 
+.saved-searches__rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: 0.25rem;
+}
+
+.saved-searches__rating svg {
+  width: 1.1rem;
+  height: auto;
+}
+
 .saved-searches__remove {
   background: rgba(255, 55, 95, 0.18) !important;
   border-color: rgba(255, 55, 95, 0.4) !important;
   color: rgba(255, 175, 185, 0.9) !important;
 }
 </style>
-

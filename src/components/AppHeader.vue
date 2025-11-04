@@ -49,6 +49,8 @@ function handleSubmit() {
         name="search"
         placeholder="Search shows..."
         :loading="props.isSearching"
+        clearable
+        @clear="localQuery = ''"
         @enter="handleSubmit"
       />
       <button class="app-header__search-button" type="submit" :disabled="isSubmitDisabled">

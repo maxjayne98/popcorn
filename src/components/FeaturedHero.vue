@@ -85,7 +85,7 @@ function handleGenreClick(genre: string) {
             ▶ Play
           </button>
           <button type="button" class="hero__button" @click="handleHeroMoreInfo">
-            ℹ More Info
+             More Info
           </button>
         </div>
         <p class="hero__subtitle">{{ subtitle }}</p>

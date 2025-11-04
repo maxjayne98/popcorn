@@ -11,6 +11,7 @@ import { useSearchCollectionsStore } from '@/stores/searchCollections';
 import type { SavedSearch } from '@/stores/searchCollections';
 import type { TVMazeShow } from '@/types/tvmaze';
 import SaveIcon from '@/components/icons/Save.vue';
+import ImdbIcon from '@/components/icons/IMDB.vue';
 
 
 const route = useRoute();
@@ -198,7 +199,14 @@ onBeforeUnmount(() => {
     <div v-if="activeQuery" class="search-tools">
       <label class="search-tools__rating">
         <span>Minimum IMDB</span>
-        <RangeInput v-model="searchMinRating" :min="0" :max="10" :step="0.5" :show-value="true" />
+        <RangeInput
+          v-model="searchMinRating"
+          :min="0"
+          :max="10"
+          :step="0.5"
+          value-prefix="IMDb "
+          :show-value="true"
+        />
       </label>
       <div class="search-tools__save">
         <SearchInput
@@ -207,6 +215,8 @@ onBeforeUnmount(() => {
           type="text"
           placeholder="Label this search"
           aria-label="Saved search label"
+          clearable
+          @clear="savedSearchLabel = ''"
         />
         <button type="button" class="search-tools__save-button" @click="saveCurrentSearch">
           <SaveIcon aria-hidden="true" />
@@ -222,7 +232,12 @@ onBeforeUnmount(() => {
       <ul class="saved-searches__list">
         <li v-for="entry in savedSearches" :key="entry.id">
           <button type="button" @click="applySavedSearch(entry)">
-            {{ entry.label }} (min ⭐ {{ entry.minRating.toFixed(1) }})
+            {{ entry.label }} (min
+            <span class="saved-searches__rating">
+              <ImdbIcon aria-hidden="true" />
+              {{ entry.minRating.toFixed(1) }}
+            </span>
+            )
           </button>
           <button type="button" class="saved-searches__remove" @click="removeSavedSearch(entry.id)">
             Remove
@@ -371,6 +386,18 @@ onBeforeUnmount(() => {
   background: rgba(24, 15, 34, 0.75);
   color: rgba(255, 255, 255, 0.85);
   cursor: pointer;
+}
+
+.saved-searches__rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: 0.25rem;
+}
+
+.saved-searches__rating svg {
+  width: 1.2rem;
+  height: auto;
 }
 
 .saved-searches__list button:hover {

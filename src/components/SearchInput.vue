@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, useAttrs, watchEffect } from 'vue';
+import { computed, nextTick, ref, useAttrs, watchEffect } from 'vue';
+import CrossIcon from '@/components/icons/Cross.vue';
 
 defineOptions({
   inheritAttrs: false,
@@ -15,6 +16,7 @@ const props = withDefaults(
     type?: string;
     loading?: boolean;
     disabled?: boolean;
+    clearable?: boolean;
   }>(),
   {
     placeholder: 'Search…',
@@ -22,6 +24,7 @@ const props = withDefaults(
     type: 'search',
     loading: false,
     disabled: false,
+    clearable: false,
   }
 );
 
@@ -30,6 +33,7 @@ const emit = defineEmits<{
   (e: 'focus'): void;
   (e: 'blur'): void;
   (e: 'enter'): void;
+  (e: 'clear'): void;
 }>();
 
 const internalValue = ref(props.modelValue);
@@ -61,6 +65,19 @@ function handleKeydown(event: KeyboardEvent) {
     emit('enter');
   }
 }
+
+const inputRef = ref<HTMLInputElement | null>(null);
+
+function handleClear() {
+  internalValue.value = '';
+  emit('update:modelValue', '');
+  emit('clear');
+  nextTick(() => {
+    inputRef.value?.focus();
+  });
+}
+
+const showClear = computed(() => props.clearable && !!internalValue.value && !props.disabled && !props.loading);
 </script>
 
 <template>
@@ -73,12 +90,22 @@ function handleKeydown(event: KeyboardEvent) {
       :placeholder="placeholder"
       :aria-label="ariaLabel"
       :disabled="disabled"
+      ref="inputRef"
       @input="handleInput"
       @focus="$emit('focus')"
       @blur="$emit('blur')"
       @keydown="handleKeydown($event)"
     />
-    <span v-if="loading" class="search-input__spinner" aria-hidden="true" />
+    <button
+      v-if="showClear"
+      type="button"
+      class="search-input__clear"
+      @click="handleClear"
+      aria-label="Clear search"
+    >
+      <CrossIcon aria-hidden="true" />
+    </button>
+    <span v-else-if="loading" class="search-input__spinner" aria-hidden="true" />
     <slot name="trailing" />
   </div>
 </template>
@@ -119,25 +146,55 @@ function handleKeydown(event: KeyboardEvent) {
   color: rgba(255, 255, 255, 0.55);
 }
 
+.search-input input::-webkit-search-cancel-button {
+  display: none;
+}
+
 .search-input input:focus {
   outline: none;
 }
 
 .search-input__spinner {
-  position: absolute;
-  right: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 18px;
   height: 18px;
   border-radius: 50%;
   border: 2px solid rgba(255, 255, 255, 0.2);
   border-top-color: rgba(255, 255, 255, 0.7);
   animation: spin 650ms linear infinite;
+  margin-left: 0.2rem;
 }
 
 .search-input--disabled {
   opacity: 0.6;
   cursor: not-allowed;
   pointer-events: none;
+}
+
+.search-input__clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  transition: background 150ms ease, transform 150ms ease;
+}
+
+.search-input__clear:hover {
+  background: rgba(255, 255, 255, 0.22);
+  transform: translateY(-1px);
+}
+
+.search-input__clear svg {
+  width: 0.75rem;
+  height: 0.75rem;
 }
 
 @keyframes spin {
