@@ -11,7 +11,7 @@ import { useSearchCollectionsStore } from '@/stores/searchCollections';
 import type { SavedSearch } from '@/stores/searchCollections';
 import type { TVMazeShow } from '@/types/tvmaze';
 import SaveIcon from '@/components/icons/Save.vue';
-import ImdbIcon from '@/components/icons/IMDB.vue';
+import ImdbIcon from '@/components/icons/ImdbIcon.vue';
 
 
 const route = useRoute();
@@ -28,10 +28,15 @@ const searchMinRating = ref(0);
 const savedSearchLabel = ref('');
 
 const savedSearches = computed(() => searchCollectionsStore.entries);
-const activeQuery = computed(() => {
+const activeQuery = computed<string>(() => {
   const value = route.query.q;
-  const query = Array.isArray(value) ? value[0] : value ?? '';
-  return query;
+  if (Array.isArray(value)) {
+    return value[0] ?? '';
+  }
+  if (typeof value === 'string') {
+    return value;
+  }
+  return '';
 });
 
 let activeController: AbortController | null = null;

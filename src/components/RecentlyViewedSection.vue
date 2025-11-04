@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import ShowCard from '@/components/ShowCard.vue';
 import VirtualHorizontalList from '@/components/VirtualHorizontalList.vue';
 import type { TVMazeShow } from '@/types/tvmaze';
@@ -6,6 +7,8 @@ import type { TVMazeShow } from '@/types/tvmaze';
 const props = defineProps<{
   shows: readonly TVMazeShow[];
 }>();
+
+const items = computed(() => [...props.shows]);
 
 const emit = defineEmits<{
   remove: [id: number];
@@ -19,7 +22,7 @@ const emit = defineEmits<{
       <p>Jump back into shows you viewed recently.</p>
     </header>
     <VirtualHorizontalList
-      :items="shows"
+      :items="items"
       :item-width="200"
       :item-gap="16"
       :item-height="428"
@@ -113,4 +116,3 @@ const emit = defineEmits<{
   background: rgba(30, 16, 44, 0.85);
 }
 </style>
-

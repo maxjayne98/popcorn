@@ -73,7 +73,7 @@ const networkOptions = computed<SelectOption[]>(() => {
       <CustomSelect
         :model-value="languageFilter"
         :options="languageOptions"
-        @update:model-value="emit('update:languageFilter', $event)"
+        @update:model-value="emit('update:languageFilter', String($event))"
       />
     </label>
     <label>
@@ -81,7 +81,7 @@ const networkOptions = computed<SelectOption[]>(() => {
       <CustomSelect
         :model-value="networkFilter"
         :options="networkOptions"
-        @update:model-value="emit('update:networkFilter', $event)"
+        @update:model-value="emit('update:networkFilter', String($event))"
       />
     </label>
   </div>
@@ -102,4 +102,3 @@ const networkOptions = computed<SelectOption[]>(() => {
   color: rgba(255, 255, 255, 0.65);
 }
 </style>
-

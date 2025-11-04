@@ -12,11 +12,13 @@ const props = withDefaults(
     pressed?: boolean;
     variant?: 'default' | 'pin';
     disabled?: boolean;
+    type?: 'button' | 'submit' | 'reset';
   }>(),
   {
     variant: 'default',
     pressed: false,
     disabled: false,
+    type: 'button',
   }
 );
 
@@ -30,10 +32,10 @@ const classes = computed(() => [
 <template>
   <button
     v-bind="$attrs"
-    :type="$attrs.type ?? 'button'"
+    :type="type"
     :class="classes"
     :aria-label="ariaLabel"
-    :aria-pressed="variant === 'pin' ? String(pressed) : undefined"
+    :aria-pressed="variant === 'pin' ? (pressed ? 'true' : 'false') : undefined"
     :disabled="disabled"
   >
     <component :is="icon" aria-hidden="true" class="media-action-button__icon" />

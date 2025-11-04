@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useParallaxBackground } from '@/composables/useParallaxBackground';
 import type { TVMazeShow } from '@/types/tvmaze';
-import ImdbIcon from '@/components/icons/Imdb.vue';
+import ImdbIcon from '@/components/icons/ImdbIcon.vue';
 
 const props = defineProps<{
   show: TVMazeShow;
@@ -25,7 +25,7 @@ const {
 } = useParallaxBackground({ range: 32 });
 
 const featuredBackdropStyle = computed(() => {
-  const baseStyle = { ...heroParallaxStyle.value };
+  const baseStyle = { ...heroParallaxStyle.value } as Record<string, string>;
   const image = props.show.image?.original ?? props.show.image?.medium;
   if (image) {
     baseStyle.backgroundImage = `linear-gradient(135deg, rgba(8, 9, 15, 0.9) 10%, rgba(8, 9, 15, 0.15) 70%), url('${image}')`;

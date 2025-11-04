@@ -18,13 +18,20 @@ class ResizeObserverMock implements ResizeObserver {
   }
 }
 
-if (typeof window !== 'undefined' && !window.ResizeObserver) {
-  window.ResizeObserver = ResizeObserverMock;
+type GlobalWithTestPolyfills = typeof globalThis & {
+  ResizeObserver?: typeof ResizeObserver;
+  scrollTo?: (options?: ScrollToOptions | number, y?: number) => void;
+};
+
+const globalWindow = globalThis as GlobalWithTestPolyfills;
+
+if (!globalWindow.ResizeObserver) {
+  globalWindow.ResizeObserver = ResizeObserverMock as unknown as typeof ResizeObserver;
 }
 
-if (!('scrollTo' in window)) {
+if (typeof globalWindow.scrollTo !== 'function') {
   // jsdom lacks scrollTo; provide a noop for components that call it.
-  window.scrollTo = () => {};
+  globalWindow.scrollTo = () => {};
 }
 
 afterEach(() => {

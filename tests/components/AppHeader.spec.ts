@@ -42,7 +42,7 @@ describe('AppHeader', () => {
     });
 
     expect(wrapper.get('.app-header__search-button').attributes('disabled')).toBeDefined();
-    expect(wrapper.find('.app-header__search-spinner').exists()).toBe(true);
+    expect(wrapper.find('.search-input__spinner').exists()).toBe(true);
 
     await wrapper.setProps({ modelValue: 'Severance', isSearching: false });
     expect(wrapper.get('input').element.value).toBe('Severance');

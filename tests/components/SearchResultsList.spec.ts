@@ -6,8 +6,8 @@ import { mount } from '@vue/test-utils';
 import SearchResultsList from '@/components/SearchResultsList.vue';
 import type { TVMazeShow } from '@/types/tvmaze';
 
-const ShowCardStub = defineComponent({
-  name: 'ShowCardStub',
+const SearchResultItemStub = defineComponent({
+  name: 'SearchResultItemStub',
   props: {
     show: {
       type: Object,
@@ -15,7 +15,7 @@ const ShowCardStub = defineComponent({
     },
   },
   setup(props) {
-    return () => h('article', { class: 'show-card-stub' }, props.show.name);
+    return () => h('article', { class: 'search-result-item-stub' }, props.show.name);
   },
 });
 
@@ -49,12 +49,12 @@ describe('SearchResultsList', () => {
       },
       global: {
         stubs: {
-          ShowCard: ShowCardStub,
+          SearchResultItem: SearchResultItemStub,
         },
       },
     });
 
-    const cards = wrapper.findAll('.show-card-stub');
+    const cards = wrapper.findAll('.search-result-item-stub');
     expect(cards).toHaveLength(2);
     expect(cards[0]?.text()).toBe('Alpha');
   });

@@ -1,13 +1,17 @@
 <script setup lang="ts">
+import { computed } from 'vue';
+
 import AsyncState from '@/components/AsyncState.vue';
 import VirtualHorizontalList from '@/components/VirtualHorizontalList.vue';
 import type { TVMazeCastMember } from '@/types/tvmaze';
 
-defineProps<{
+const props = defineProps<{
   cast: TVMazeCastMember[];
   isLoading: boolean;
   error: string | null;
 }>();
+
+const castItems = computed(() => props.cast);
 </script>
 
 <template>
@@ -20,7 +24,7 @@ defineProps<{
       <p v-if="!cast.length" class="show-detail__cast-state">No cast information available.</p>
       <VirtualHorizontalList
         v-else
-        :items="cast"
+        :items="castItems"
         :item-width="180"
         :item-gap="16"
         :item-height="240"
@@ -31,19 +35,19 @@ defineProps<{
           <article class="show-detail__cast-card" role="listitem">
             <div class="show-detail__cast-avatar">
               <img
-                v-if="item.person.image?.medium || item.person.image?.original"
-                :src="item.person.image?.medium ?? item.person.image?.original"
-                :alt="`${item.person.name} portrait`"
+                v-if="(item as TVMazeCastMember).person.image?.medium || (item as TVMazeCastMember).person.image?.original"
+                :src="(item as TVMazeCastMember).person.image?.medium ?? (item as TVMazeCastMember).person.image?.original"
+                :alt="`${(item as TVMazeCastMember).person.name} portrait`"
                 loading="lazy"
               />
-              <span v-else>{{ item.person.name.charAt(0).toUpperCase() }}</span>
+              <span v-else>{{ (item as TVMazeCastMember).person.name.charAt(0).toUpperCase() }}</span>
             </div>
             <div class="show-detail__cast-info">
-              <p class="show-detail__cast-name">{{ item.person.name }}</p>
-              <p v-if="item.character?.name" class="show-detail__cast-role">
-                as {{ item.character.name }}
-                <span v-if="item.voice"> (voice)</span>
-                <span v-else-if="item.self"> (self)</span>
+              <p class="show-detail__cast-name">{{ (item as TVMazeCastMember).person.name }}</p>
+              <p v-if="(item as TVMazeCastMember).character?.name" class="show-detail__cast-role">
+                as {{ (item as TVMazeCastMember).character!.name }}
+                <span v-if="(item as TVMazeCastMember).voice"> (voice)</span>
+                <span v-else-if="(item as TVMazeCastMember).self"> (self)</span>
               </p>
             </div>
           </article>

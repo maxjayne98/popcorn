@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
 import type { SavedSearch } from '@/stores/searchCollections';
-import ImdbIcon from '@/components/icons/IMDB.vue';
+import ImdbIcon from '@/components/icons/ImdbIcon.vue';
 
-const props = defineProps<{
+defineProps<{
   searches: readonly SavedSearch[];
 }>();
 

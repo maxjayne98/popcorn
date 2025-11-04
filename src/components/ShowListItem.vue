@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import { RouterLink } from 'vue-router';
 import type { TVMazeShow } from '@/types/tvmaze';
 import { useParallaxBackground } from '@/composables/useParallaxBackground';
-import ImdbIcon from '@/components/icons/IMDB.vue';
+import ImdbIcon from '@/components/icons/ImdbIcon.vue';
 
 const props = defineProps<{
   show: TVMazeShow;

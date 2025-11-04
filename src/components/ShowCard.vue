@@ -4,7 +4,7 @@ import { RouterLink } from 'vue-router';
 import ShareIcon from '@/components/icons/Share.vue';
 import StarIcon from '@/components/icons/Star.vue';
 import TwitterIcon from '@/components/icons/Twitter.vue';
-import ImdbIcon from '@/components/icons/IMDB.vue';
+import ImdbIcon from '@/components/icons/ImdbIcon.vue';
 import MediaActionButton from '@/components/MediaActionButton.vue';
 import { formatYear } from '@/utils/formatDate';
 import type { TVMazeShow } from '@/types/tvmaze';
@@ -100,19 +100,21 @@ function tweetShow(event: MouseEvent) {
       <MediaActionButton
         class="show-card__action show-card__tweet"
         :icon="TwitterIcon"
-        :aria-label="`Tweet about ${show.name}`"
+        :ariaLabel="`Tweet about ${show.name}`"
         @click.stop="tweetShow"
       />
       <MediaActionButton
         class="show-card__action show-card__share"
         :icon="ShareIcon"
-        :aria-label="`Share ${show.name}`"
+        :ariaLabel="`Share ${show.name}`"
         @click.stop="shareShow"
       />
       <MediaActionButton
         class="show-card__action show-card__pin"
         :icon="StarIcon"
-        :aria-label="isPinned ? `Remove ${show.name} from watchlist` : `Add ${show.name} to watchlist`"
+        :ariaLabel="
+          isPinned ? `Remove ${show.name} from watchlist` : `Add ${show.name} to watchlist`
+        "
         variant="pin"
         :pressed="isPinned"
         @click.stop="toggleWatchlist"
