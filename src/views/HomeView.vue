@@ -2,12 +2,14 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import type { DeepReadonly } from 'vue';
 import { useRouter } from 'vue-router';
+import CustomSelect from '@/components/CustomSelect.vue';
 import GenreRail from '@/components/GenreRail.vue';
 import SearchResultsList from '@/components/SearchResultsList.vue';
 import ShowCard from '@/components/ShowCard.vue';
 import { useShowCatalog } from '@/composables/useShowCatalog';
 import { useSearchLoading } from '@/composables/useSearchLoading';
 import { useParallaxBackground } from '@/composables/useParallaxBackground';
+import { useDebounceFn } from '@/composables/useDebounce';
 import { useWatchlistStore } from '@/stores/watchlist';
 import { useRecentlyViewedStore } from '@/stores/recentlyViewed';
 import { useSearchCollectionsStore } from '@/stores/searchCollections';
@@ -33,8 +35,14 @@ const searchResults = ref<TVMazeShow[]>([]);
 const searchError = ref<string | null>(null);
 const isSearching = ref(false);
 let activeController: AbortController | null = null;
+let hasRunInitialSearch = false;
+const SEARCH_DEBOUNCE_MS = 700;
 
 type RuntimeFilter = 'all' | 'short' | 'medium' | 'long';
+type SelectOption = {
+  value: string;
+  label: string;
+};
 const runtimeFilter = ref<RuntimeFilter>('all');
 const languageFilter = ref('all');
 const networkFilter = ref('all');
@@ -59,31 +67,39 @@ const recentlyViewedShows = computed(() => recentlyViewedStore.items);
 const savedSearches = computed(() => searchCollectionsStore.entries);
 
 
-const runtimeOptions = [
+const runtimeOptions: SelectOption[] = [
   { value: 'all', label: 'Any runtime' },
   { value: 'short', label: '< 30 min' },
   { value: 'medium', label: '30-60 min' },
   { value: 'long', label: '> 60 min' },
 ];
 
-const languageOptions = computed(() => {
+const languageOptions = computed<SelectOption[]>(() => {
   const set = new Set<string>();
   for (const show of allShows.value) {
     if (show.language) {
       set.add(show.language);
     }
   }
-  return ['all', ...Array.from(set).sort((a, b) => a.localeCompare(b))];
+  const languages = Array.from(set).sort((a, b) => a.localeCompare(b));
+  return [
+    { value: 'all', label: 'Any language' },
+    ...languages.map((language) => ({ value: language, label: language })),
+  ];
 });
 
-const networkOptions = computed(() => {
+const networkOptions = computed<SelectOption[]>(() => {
   const set = new Set<string>();
   for (const show of allShows.value) {
     if (show.network?.name) {
       set.add(show.network.name);
     }
   }
-  return ['all', ...Array.from(set).sort((a, b) => a.localeCompare(b))];
+  const networks = Array.from(set).sort((a, b) => a.localeCompare(b));
+  return [
+    { value: 'all', label: 'Any network' },
+    ...networks.map((network) => ({ value: network, label: network })),
+  ];
 });
 
 function matchesFilters(show: TVMazeShow) {
@@ -283,6 +299,11 @@ async function performSearch(query: string) {
   }
 }
 
+const { run: runDebouncedSearch, cancel: cancelDebouncedSearch } = useDebounceFn(
+  performSearch,
+  SEARCH_DEBOUNCE_MS
+);
+
 function applySearchFilters() {
   if (!lastSearchResults.value.length) {
     searchResults.value = [];
@@ -297,7 +318,24 @@ function applySearchFilters() {
 watch(
   () => props.searchQuery,
   (query) => {
-    performSearch(query);
+    cancelDebouncedSearch();
+    if (activeController) {
+      activeController.abort();
+      activeController = null;
+    }
+    const normalizedQuery = query.trim();
+    const isFirstRun = !hasRunInitialSearch;
+    const shouldRunImmediately = isFirstRun || !normalizedQuery;
+
+    if (isFirstRun) {
+      hasRunInitialSearch = true;
+    }
+
+    if (shouldRunImmediately) {
+      performSearch(query);
+      return;
+    }
+    runDebouncedSearch(query);
   },
   { immediate: true }
 );
@@ -312,6 +350,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   activeController?.abort();
+  cancelDebouncedSearch();
 });
 
 watch(
@@ -425,27 +464,15 @@ function removeSavedSearch(id: string) {
       <div class="top-watch__filters">
         <label>
           <span>Runtime</span>
-          <select v-model="runtimeFilter">
-            <option v-for="option in runtimeOptions" :key="option.value" :value="option.value">
-              {{ option.label }}
-            </option>
-          </select>
+          <CustomSelect v-model="runtimeFilter" :options="runtimeOptions" />
         </label>
         <label>
           <span>Language</span>
-          <select v-model="languageFilter">
-            <option v-for="option in languageOptions" :key="option" :value="option">
-              {{ option === 'all' ? 'Any language' : option }}
-            </option>
-          </select>
+          <CustomSelect v-model="languageFilter" :options="languageOptions" />
         </label>
         <label>
           <span>Network</span>
-          <select v-model="networkFilter">
-            <option v-for="option in networkOptions" :key="option" :value="option">
-              {{ option === 'all' ? 'Any network' : option }}
-            </option>
-          </select>
+          <CustomSelect v-model="networkFilter" :options="networkOptions" />
         </label>
       </div>
       <p v-if="!filteredTopWatchShows.length" class="state">No picks match the selected filters yet.</p>
@@ -729,14 +756,6 @@ function removeSavedSearch(id: string) {
   gap: 0.25rem;
   font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.65);
-}
-
-.top-watch__filters select {
-  padding: 0.4rem 0.75rem;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(20, 12, 28, 0.85);
-  color: rgba(255, 255, 255, 0.85);
 }
 
 .recent-card {
