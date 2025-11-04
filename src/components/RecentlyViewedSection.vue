@@ -22,7 +22,7 @@ const emit = defineEmits<{
       :items="shows"
       :item-width="200"
       :item-gap="16"
-      :item-height="480"
+      :item-height="428"
       role="list"
       class="recently-viewed__rail"
     >
@@ -92,7 +92,7 @@ const emit = defineEmits<{
 
 .recent-card__remove {
   position: absolute;
-  top: 0.6rem;
+  top: 0.8rem;
   left: 0.6rem;
   z-index: 2;
   padding: 0.25rem 0.6rem;

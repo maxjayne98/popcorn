@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useParallaxBackground } from '@/composables/useParallaxBackground';
 import type { TVMazeShow } from '@/types/tvmaze';
+import ImdbIcon from '@/components/icons/Imdb.vue';
 
 const props = defineProps<{
   show: TVMazeShow;
@@ -73,7 +74,10 @@ function handleGenreClick(genre: string) {
         <p v-if="featuredSummary" class="hero__summary">{{ featuredSummary }}</p>
         <ul class="hero__meta">
           <li v-if="show.genres.length">{{ show.genres.join(' • ') }}</li>
-          <li v-if="show.rating?.average">⭐ {{ show.rating.average.toFixed(1) }}</li>
+          <li v-if="show.rating?.average" class="hero__rating">
+            <ImdbIcon aria-hidden="true" class="hero__rating-icon" />
+            {{ show.rating.average.toFixed(1) }}
+          </li>
           <li v-if="show.runtime">{{ show.runtime }} min</li>
         </ul>
         <div class="hero__actions">
@@ -168,6 +172,17 @@ function handleGenreClick(genre: string) {
   color: rgba(255, 190, 203, 0.78);
 }
 
+.hero__rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.hero__rating-icon {
+  width: 1.4rem;
+  height: auto;
+}
+
 .hero__actions {
   display: flex;
   flex-wrap: wrap;
@@ -241,4 +256,3 @@ function handleGenreClick(genre: string) {
   background: rgba(32, 18, 46, 0.75);
 }
 </style>
-

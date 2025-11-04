@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router';
 import ShareIcon from '@/components/icons/Share.vue';
 import StarIcon from '@/components/icons/Star.vue';
 import TwitterIcon from '@/components/icons/Twitter.vue';
+import ImdbIcon from '@/components/icons/Imdb.vue';
 import MediaActionButton from '@/components/MediaActionButton.vue';
 import { formatYear } from '@/utils/formatDate';
 import type { TVMazeShow } from '@/types/tvmaze';
@@ -100,7 +101,10 @@ function tweetShow(event: MouseEvent) {
     <div class="result-item__poster">
       <img v-if="posterSrc" :src="posterSrc" :alt="`${show.name} poster`" loading="lazy" />
       <div v-else class="result-item__poster-placeholder">{{ show.name.charAt(0).toUpperCase() }}</div>
-      <span v-if="averageRating" class="result-item__badge">⭐ {{ averageRating.toFixed(1) }}</span>
+      <span v-if="averageRating" class="result-item__badge">
+        <ImdbIcon aria-hidden="true" class="result-item__imdb" />
+        {{ averageRating.toFixed(1) }}
+      </span>
     </div>
     <div class="result-item__body">
       <header class="result-item__header">
@@ -161,8 +165,9 @@ function tweetShow(event: MouseEvent) {
 
 .result-item:hover {
   transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.18);
+  border-color: var(--accent-color);
   box-shadow: 0 18px 28px rgba(0, 0, 0, 0.35);
+  
 }
 
 .result-item__poster {
@@ -193,12 +198,20 @@ function tweetShow(event: MouseEvent) {
   position: absolute;
   left: 0.75rem;
   bottom: 0.75rem;
-  padding: 0.35rem 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.75rem;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.65);
-  color: #ffd54f;
+  background: rgba(0, 0, 0, 0.75);
+  color: rgba(255, 255, 255, 0.9);
   font-weight: 600;
   font-size: 0.85rem;
+}
+
+.result-item__imdb {
+  width: 1.8rem;
+  height: auto;
 }
 
 .result-item__body {

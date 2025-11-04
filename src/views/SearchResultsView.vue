@@ -197,8 +197,8 @@ onBeforeUnmount(() => {
 
     <div v-if="activeQuery" class="search-tools">
       <label class="search-tools__rating">
-        <span>Minimum rating</span>
-        <RangeInput v-model="searchMinRating" :min="0" :max="10" :step="0.5" value-prefix="⭐ " />
+        <span>Minimum IMDB</span>
+        <RangeInput v-model="searchMinRating" :min="0" :max="10" :step="0.5" :show-value="true" />
       </label>
       <div class="search-tools__save">
         <SearchInput

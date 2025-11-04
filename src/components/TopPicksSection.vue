@@ -71,7 +71,7 @@ const filteredShows = computed(() => props.shows.filter(matchesFilters));
       :items="filteredShows"
       :item-width="200"
       :item-gap="16"
-      :item-height="480"
+      :item-height="428"
       role="list"
       class="top-watch__rail"
     >

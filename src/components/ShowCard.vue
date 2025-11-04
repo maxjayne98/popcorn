@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router';
 import ShareIcon from '@/components/icons/Share.vue';
 import StarIcon from '@/components/icons/Star.vue';
 import TwitterIcon from '@/components/icons/Twitter.vue';
+import ImdbIcon from '@/components/icons/IMDB.vue';
 import MediaActionButton from '@/components/MediaActionButton.vue';
 import { formatYear } from '@/utils/formatDate';
 import type { TVMazeShow } from '@/types/tvmaze';
@@ -124,7 +125,8 @@ function tweetShow(event: MouseEvent) {
         <span>{{ show.name.charAt(0).toUpperCase() }}</span>
       </div>
       <span v-if="averageRating" class="show-card__badge">
-        ⭐ {{ averageRating.toFixed(1) }}
+        <ImdbIcon aria-hidden="true" class="show-card__imdb" />
+        {{ averageRating.toFixed(1) }}
       </span>
     </div>
     <div class="show-card__body">
@@ -238,12 +240,20 @@ function tweetShow(event: MouseEvent) {
   position: absolute;
   left: 0.75rem;
   bottom: 0.75rem;
-  padding: 0.35rem 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
   background: rgba(0, 0, 0, 0.75);
-  color: #ffdd57;
+  color: rgba(255, 255, 255, 0.9);
   border-radius: 999px;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   font-weight: 600;
+}
+
+.show-card__imdb {
+  width: 1.4rem;
+  height: auto;
 }
 
 .show-card__body {
