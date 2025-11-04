@@ -52,3 +52,18 @@ export interface SearchResult {
   score: number;
   show: TVMazeShow;
 }
+
+export interface TVMazeCastMember {
+  person: {
+    id: number;
+    name: string;
+    image?: ImageInfo | null;
+  };
+  character: {
+    id: number;
+    name: string;
+    image?: ImageInfo | null;
+  } | null;
+  self?: boolean;
+  voice?: boolean;
+}

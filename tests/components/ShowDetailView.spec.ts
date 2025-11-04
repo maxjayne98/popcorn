@@ -5,8 +5,11 @@ import { flushPromises, mount, RouterLinkStub } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import { useRecentlyViewedStore } from '@/stores/recentlyViewed';
 import ShowDetailView from '@/views/ShowDetailView.vue';
+import ShowDetailHero from '@/components/ShowDetailHero.vue';
+import ShowCastRail from '@/components/ShowCastRail.vue';
 
 const ensureShow = vi.fn<(id: number, signal?: AbortSignal) => Promise<unknown>>();
+const fetchShowCast = vi.hoisted(() => vi.fn<(id: number, signal?: AbortSignal) => Promise<unknown>>());
 const back = vi.fn();
 const push = vi.fn();
 
@@ -14,6 +17,10 @@ vi.mock('@/composables/useShowCatalog', () => ({
   useShowCatalog: () => ({
     ensureShow,
   }),
+}));
+
+vi.mock('@/api/tvmaze', () => ({
+  fetchShowCast,
 }));
 
 vi.mock('vue-router', () => ({
@@ -28,8 +35,10 @@ beforeEach(() => {
   setActivePinia(createPinia());
   useRecentlyViewedStore().clear();
   ensureShow.mockReset();
+  fetchShowCast.mockReset();
   back.mockReset();
   push.mockReset();
+  fetchShowCast.mockResolvedValue([]);
 });
 
 function createShow(overrides: Record<string, unknown> = {}) {
@@ -62,6 +71,10 @@ function mountView(id: string) {
       stubs: {
         RouterLink: RouterLinkStub,
       },
+      components: {
+        ShowDetailHero,
+        ShowCastRail,
+      },
     },
   });
 }
@@ -73,6 +86,7 @@ describe('ShowDetailView', () => {
     await flushPromises();
     expect(wrapper.text()).toContain('Invalid show identifier.');
     expect(ensureShow).not.toHaveBeenCalled();
+    expect(fetchShowCast).not.toHaveBeenCalled();
   });
 
   it('renders show details when data is available', async () => {
@@ -90,6 +104,7 @@ describe('ShowDetailView', () => {
     expect(wrapper.find('.show-detail__meta').text()).toContain('HBO (USA)');
     expect(wrapper.find('img[alt="My Show poster"]').attributes('src')).toBe(show.image.medium);
     expect(addSpy).toHaveBeenCalledWith(show);
+    expect(fetchShowCast).toHaveBeenCalledWith(7, expect.any(AbortSignal));
   });
 
   it('shows placeholder when poster is missing', async () => {
@@ -100,6 +115,7 @@ describe('ShowDetailView', () => {
     await flushPromises();
 
     expect(wrapper.find('.show-detail__poster-placeholder').text()).toBe('M');
+    expect(fetchShowCast).toHaveBeenCalledWith(7, expect.any(AbortSignal));
   });
 
   it('reports when the show cannot be found', async () => {
@@ -109,6 +125,48 @@ describe('ShowDetailView', () => {
     await flushPromises();
 
     expect(wrapper.text()).toContain('Show not found. It may have been removed.');
+    expect(fetchShowCast).not.toHaveBeenCalled();
+  });
+
+  it('renders cast list when available', async () => {
+    const show = createShow();
+    ensureShow.mockResolvedValue(show);
+    fetchShowCast.mockResolvedValue([
+      {
+        person: { id: 1, name: 'Actor One', image: { medium: 'https://example.com/actor1.jpg' } },
+        character: { id: 11, name: 'Hero', image: null },
+        self: false,
+        voice: false,
+      },
+      {
+        person: { id: 2, name: 'Actor Two', image: null },
+        character: { id: 12, name: 'Sidekick', image: null },
+        self: false,
+        voice: true,
+      },
+    ]);
+
+    const wrapper = mountView('7');
+    await flushPromises();
+
+    const castItems = wrapper.findAll('.show-detail__cast-card');
+    expect(castItems).toHaveLength(2);
+    expect(castItems[0]?.text()).toContain('Actor One');
+    expect(castItems[0]?.text()).toContain('Hero');
+    expect(castItems[1]?.text()).toContain('Actor Two');
+    expect(castItems[1]?.text()).toContain('Sidekick');
+  });
+
+  it('shows cast error message when retrieval fails', async () => {
+    ensureShow.mockResolvedValue(createShow());
+    fetchShowCast.mockRejectedValue(new Error('Cast unavailable'));
+
+    const wrapper = mountView('7');
+    await flushPromises();
+
+    const castState = wrapper.find('.show-detail__cast-state');
+    expect(castState.exists()).toBe(true);
+    expect(castState.text()).toContain('Cast unavailable');
   });
 
   it('shows loading indicator while fetching', async () => {

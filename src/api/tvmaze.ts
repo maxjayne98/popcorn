@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { SearchResult, TVMazeShow } from '@/types/tvmaze';
+import type { SearchResult, TVMazeCastMember, TVMazeShow } from '@/types/tvmaze';
 
 const API_BASE = 'https://api.tvmaze.com';
 const apiClient = axios.create({
@@ -9,7 +9,7 @@ const apiClient = axios.create({
   },
 });
 
-async function request<T>(path: string, signal?: AbortSignal): Promise<T> {
+async function apiGet<T>(path: string, signal?: AbortSignal): Promise<T> {
   try {
     const { data } = await apiClient.get<T>(path, { signal });
     return data;
@@ -30,13 +30,17 @@ async function request<T>(path: string, signal?: AbortSignal): Promise<T> {
 }
 
 export async function fetchShowsPage(page: number, signal?: AbortSignal): Promise<TVMazeShow[]> {
-  return request<TVMazeShow[]>(`/shows?page=${page}`, signal);
+  return apiGet<TVMazeShow[]>(`/shows?page=${page}`, signal);
 }
 
 export async function fetchShowById(id: number, signal?: AbortSignal): Promise<TVMazeShow> {
-  return request<TVMazeShow>(`/shows/${id}`, signal);
+  return apiGet<TVMazeShow>(`/shows/${id}`, signal);
 }
 
 export async function searchShowsByName(query: string, signal?: AbortSignal): Promise<SearchResult[]> {
-  return request<SearchResult[]>(`/search/shows?q=${encodeURIComponent(query)}`, signal);
+  return apiGet<SearchResult[]>(`/search/shows?q=${encodeURIComponent(query)}`, signal);
+}
+
+export async function fetchShowCast(id: number, signal?: AbortSignal): Promise<TVMazeCastMember[]> {
+  return apiGet<TVMazeCastMember[]>(`/shows/${id}/cast`, signal);
 }
