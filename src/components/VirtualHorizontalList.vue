@@ -178,7 +178,7 @@ watch(
   align-items: stretch;
 }
 
-.virtual-rail__cell :deep(*) {
+.virtual-rail__cell :deep(li) {
   flex: 1 1 auto;
 }
 

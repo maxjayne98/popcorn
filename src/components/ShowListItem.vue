@@ -150,6 +150,8 @@ const { parallaxStyle: posterParallaxStyle, onMouseEnter, onMouseLeave, onMouseM
   align-items: center;
   justify-content: center;
   padding: 0.25rem 0.65rem;
+  height: 1.5rem;
+  line-height: 1rem;
   border-radius: 999px;
   font-size: 0.7rem;
   white-space: nowrap;

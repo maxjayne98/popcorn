@@ -17,6 +17,7 @@ const imageSrc = computed(() => props.show.image?.medium ?? props.show.image?.or
 const averageRating = computed(() => props.show.rating?.average ?? null);
 const premiereYear = computed(() => formatYear(props.show.premiered) || null);
 const networkLabel = computed(() => props.show.network?.name ?? props.show.language ?? 'Uncategorized');
+const visibleGenres = computed(() => props.show.genres.slice(0, 3));
 const { parallaxStyle: posterParallaxStyle, onMouseEnter, onMouseLeave, onMouseMove } =
   useParallaxBackground({ range: 14 });
 const watchlist = useWatchlistStore();
@@ -131,13 +132,16 @@ function tweetShow(event: MouseEvent) {
       </span>
     </div>
     <div class="show-card__body">
-      <h3 class="show-card__title">{{ show.name }}</h3>
-      <p class="show-card__meta">
-        <span>{{ networkLabel }}</span>
-        <span v-if="premiereYear">• {{ premiereYear }}</span>
-      </p>
-      <ul v-if="show.genres.length" class="show-card__genres">
-        <li v-for="genre in show.genres" :key="genre">{{ genre }}</li>
+      <div>
+
+        <h3 class="show-card__title">{{ show.name }}</h3>
+        <p class="show-card__meta">
+          <span>{{ networkLabel }}</span>
+          <span v-if="premiereYear">• {{ premiereYear }}</span>
+        </p>
+      </div>
+        <ul v-if="visibleGenres.length" class="show-card__genres">
+        <li v-for="genre in visibleGenres" :key="genre">{{ genre }}</li>
       </ul>
     </div>
   </RouterLink>
@@ -237,7 +241,7 @@ function tweetShow(event: MouseEvent) {
 }
 
 .show-card:hover {
-  transform: translateY(-4px);
+  // transform: translateY(-4px);
   border-color: rgba(255, 45, 85, 0.45);
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
 }
@@ -287,9 +291,11 @@ function tweetShow(event: MouseEvent) {
 }
 
 .show-card__body {
-  display: grid;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   gap: 0.5rem;
-  padding: 0.85rem 1rem 1rem;
+  padding: 0.65rem;
   transition: transform 200ms ease;
   transform: translate(
     calc(var(--parallax-shift-x, 0px) * 0.15),
@@ -302,21 +308,30 @@ function tweetShow(event: MouseEvent) {
   font-size: 1rem;
   font-weight: 600;
   color: white;
-  text-wrap: balance;
+  line-height: 1.4;
+  height: 1.4rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .show-card__meta {
   display: flex;
   gap: 0.35rem;
-  flex-wrap: wrap;
   margin: 0;
+  height: 1.25rem;
+  line-height: 1.25rem;
   font-size: 0.85rem;
   color: rgba(255, 255, 255, 0.65);
+  align-items: center;
 }
 
 .show-card__genres {
   display: flex;
   flex-wrap: wrap;
+  min-height: 3.5rem;
   gap: 0.35rem;
   margin: 0;
   padding: 0;
@@ -328,6 +343,8 @@ function tweetShow(event: MouseEvent) {
   align-items: center;
   justify-content: center;
   padding: 0.25rem 0.65rem;
+  height: 1.5rem;
+  line-height: 1rem;
   border-radius: 999px;
   font-size: 0.7rem;
   letter-spacing: 0.02em;

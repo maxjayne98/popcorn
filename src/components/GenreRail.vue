@@ -25,7 +25,7 @@ const subtitle = computed(() => {
       :items="shows"
       :item-width="200"
       :item-gap="16"
-      :item-height="320"
+      :item-height="480"
       role="list"
       class="genre-rail__list"
     >
