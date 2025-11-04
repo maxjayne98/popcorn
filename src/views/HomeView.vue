@@ -1,42 +1,23 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import type { DeepReadonly } from 'vue';
 import { useRouter } from 'vue-router';
 import CustomSelect from '@/components/CustomSelect.vue';
 import GenreRail from '@/components/GenreRail.vue';
-import SearchResultsList from '@/components/SearchResultsList.vue';
 import ShowCard from '@/components/ShowCard.vue';
 import { useShowCatalog } from '@/composables/useShowCatalog';
-import { useSearchLoading } from '@/composables/useSearchLoading';
 import { useParallaxBackground } from '@/composables/useParallaxBackground';
-import { useDebounceFn } from '@/composables/useDebounce';
 import { useWatchlistStore } from '@/stores/watchlist';
 import { useRecentlyViewedStore } from '@/stores/recentlyViewed';
 import { useSearchCollectionsStore } from '@/stores/searchCollections';
 import type { SavedSearch } from '@/stores/searchCollections';
 import type { TVMazeShow } from '@/types/tvmaze';
 
-const props = defineProps<{
-  searchQuery: string;
-}>();
-
-const emit = defineEmits<{
-  (e: 'update-search', value: string): void;
-}>();
-
 const router = useRouter();
-const { loadShows, genreCollections, isLoading, error, searchShows, allShows } = useShowCatalog();
-const { setSearching } = useSearchLoading();
+const { loadShows, genreCollections, isLoading, error, allShows } = useShowCatalog();
 const watchlistStore = useWatchlistStore();
 const recentlyViewedStore = useRecentlyViewedStore();
 const searchCollectionsStore = useSearchCollectionsStore();
-
-const searchResults = ref<TVMazeShow[]>([]);
-const searchError = ref<string | null>(null);
-const isSearching = ref(false);
-let activeController: AbortController | null = null;
-let hasRunInitialSearch = false;
-const SEARCH_DEBOUNCE_MS = 700;
 
 type RuntimeFilter = 'all' | 'short' | 'medium' | 'long';
 type SelectOption = {
@@ -46,10 +27,6 @@ type SelectOption = {
 const runtimeFilter = ref<RuntimeFilter>('all');
 const languageFilter = ref('all');
 const networkFilter = ref('all');
-
-const searchMinRating = ref(0);
-const savedSearchLabel = ref('');
-const lastSearchResults = ref<TVMazeShow[]>([]);
 
 const featuredShow = ref<TVMazeShow | null>(null);
 const topWatchShows = ref<TVMazeShow[]>([]);
@@ -155,8 +132,6 @@ const heroGenreChips = computed(() => {
   return Array.from(set).sort((a, b) => a.localeCompare(b));
 });
 
-const isShowingResults = computed(() => !!props.searchQuery.trim());
-
 const heroSubtitle = computed(() => {
   if (!genreCollections.value.length) {
     return 'Fetching curated TV shows by genre...';
@@ -247,110 +222,8 @@ function deriveFeaturedSelection(shows: readonly DeepReadonly<TVMazeShow>[]) {
   topWatchShows.value = shuffle(topPool).slice(0, 6);
 }
 
-async function performSearch(query: string) {
-  const normalized = query.trim();
-
-  activeController?.abort();
-  searchError.value = null;
-
-  if (!normalized) {
-    searchResults.value = [];
-    lastSearchResults.value = [];
-    setSearching(false);
-    isSearching.value = false;
-    emit('update-search', '');
-    return;
-  }
-
-  const controller = new AbortController();
-  activeController = controller;
-  isSearching.value = true;
-  setSearching(true);
-
-  try {
-    const results = await searchShows(normalized, controller.signal);
-    if (controller.signal.aborted) {
-      return;
-    }
-    const uniqueShows = new Map<number, TVMazeShow>();
-    for (const entry of results) {
-      uniqueShows.set(entry.show.id, entry.show);
-    }
-    lastSearchResults.value = [...uniqueShows.values()].sort((a, b) => {
-      const ratingA = a.rating?.average ?? 0;
-      const ratingB = b.rating?.average ?? 0;
-      if (ratingA === ratingB) {
-        return a.name.localeCompare(b.name);
-      }
-      return ratingB - ratingA;
-    });
-    applySearchFilters();
-  } catch (err) {
-    if (controller.signal.aborted) {
-      return;
-    }
-    searchError.value = err instanceof Error ? err.message : 'Search failed. Please try again.';
-  } finally {
-    if (!controller.signal.aborted) {
-      isSearching.value = false;
-      setSearching(false);
-      activeController = null;
-    }
-  }
-}
-
-const { run: runDebouncedSearch, cancel: cancelDebouncedSearch } = useDebounceFn(
-  performSearch,
-  SEARCH_DEBOUNCE_MS
-);
-
-function applySearchFilters() {
-  if (!lastSearchResults.value.length) {
-    searchResults.value = [];
-    return;
-  }
-  searchResults.value = lastSearchResults.value.filter((show) => {
-    const rating = show.rating?.average ?? 0;
-    return rating >= searchMinRating.value;
-  });
-}
-
-watch(
-  () => props.searchQuery,
-  (query) => {
-    cancelDebouncedSearch();
-    if (activeController) {
-      activeController.abort();
-      activeController = null;
-    }
-    const normalizedQuery = query.trim();
-    const isFirstRun = !hasRunInitialSearch;
-    const shouldRunImmediately = isFirstRun || !normalizedQuery;
-
-    if (isFirstRun) {
-      hasRunInitialSearch = true;
-    }
-
-    if (shouldRunImmediately) {
-      performSearch(query);
-      return;
-    }
-    runDebouncedSearch(query);
-  },
-  { immediate: true }
-);
-
-watch(searchMinRating, () => {
-  applySearchFilters();
-});
-
 onMounted(() => {
   ensureShowsLoaded();
-});
-
-onBeforeUnmount(() => {
-  activeController?.abort();
-  cancelDebouncedSearch();
 });
 
 watch(
@@ -393,20 +266,18 @@ function focusHeroByGenre(genre: string) {
   }
 }
 
-function saveCurrentSearch() {
-  const query = props.searchQuery.trim();
-  if (!query) {
-    searchError.value = 'Enter a search term before saving.';
-    return;
-  }
-  const label = savedSearchLabel.value.trim() || `Search: ${query}`;
-  searchCollectionsStore.add(label, query, searchMinRating.value);
-  savedSearchLabel.value = '';
-}
-
 function applySavedSearch(entry: SavedSearch) {
-  searchMinRating.value = entry.minRating;
-  emit('update-search', entry.query);
+  router
+    .push({
+      name: 'search-results',
+      query: {
+        q: entry.query,
+        ...(entry.minRating ? { minRating: entry.minRating.toString() } : {}),
+      },
+    })
+    .catch(() => {
+      /* ignore redundant navigation */
+    });
 }
 
 function removeSavedSearch(id: string) {
@@ -548,41 +419,7 @@ function removeSavedSearch(id: string) {
       </div>
     </section>
 
-    <section v-if="isShowingResults" class="page-section">
-      <header class="section-header">
-        <h2>Search Results</h2>
-        <p>
-          Showing matches for <strong>"{{ searchQuery }}"</strong>
-          <span v-if="isSearching">(searching...)</span>
-          <span v-else-if="searchResults.length">({{ searchResults.length }} results)</span>
-        </p>
-      </header>
-      <div class="search-tools">
-        <label class="search-tools__rating">
-          <span>Minimum rating</span>
-          <input type="range" min="0" max="10" step="0.5" v-model.number="searchMinRating" />
-          <span class="search-tools__value">⭐ {{ searchMinRating.toFixed(1) }}</span>
-        </label>
-        <div class="search-tools__save">
-          <input
-            v-model="savedSearchLabel"
-            type="text"
-            placeholder="Label this search"
-            aria-label="Saved search label"
-          />
-          <button type="button" @click="saveCurrentSearch">Save Search</button>
-        </div>
-      </div>
-      <p v-if="searchError" class="state state--error">
-        {{ searchError }}
-      </p>
-      <p v-else-if="!searchResults.length && !isSearching" class="state">
-        No shows matched your search yet.
-      </p>
-      <SearchResultsList v-else :shows="searchResults" />
-    </section>
-
-    <section v-else class="page-section">
+    <section class="page-section">
       <p v-if="error" class="state state--error">
         Unable to load shows right now. {{ error }}
       </p>
@@ -784,59 +621,6 @@ function removeSavedSearch(id: string) {
   transform: translateY(-2px);
   border-color: rgba(255, 255, 255, 0.5);
   background: rgba(30, 16, 44, 0.85);
-}
-
-.search-tools {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  align-items: center;
-  margin-bottom: 0.75rem;
-}
-
-.search-tools__rating {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: rgba(255, 255, 255, 0.75);
-}
-
-.search-tools__rating input[type='range'] {
-  accent-color: var(--accent-color, #ff2d55);
-}
-
-.search-tools__value {
-  font-weight: 600;
-  color: rgba(255, 215, 0, 0.9);
-}
-
-.search-tools__save {
-  display: inline-flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.search-tools__save input {
-  padding: 0.4rem 0.75rem;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(20, 12, 28, 0.75);
-  color: rgba(255, 255, 255, 0.85);
-}
-
-.search-tools__save button {
-  padding: 0.4rem 0.85rem;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  background: rgba(26, 6, 22, 0.85);
-  color: rgba(255, 255, 255, 0.85);
-  cursor: pointer;
-  transition: transform 150ms ease, border-color 150ms ease;
-}
-
-.search-tools__save button:hover {
-  transform: translateY(-1px);
-  border-color: rgba(255, 255, 255, 0.45);
 }
 
 .saved-searches__list {

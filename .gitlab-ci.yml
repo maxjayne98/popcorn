@@ -1,0 +1,59 @@
+stages:
+  - build
+  - deploy
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+
+default:
+  image: docker:24.0.5
+  services:
+    - name: docker:24.0.5-dind
+      command: ["--insecure-registry=0.0.0.0/0"]
+  before_script:
+    - apk add --no-cache openssh-client bash rsync
+    - mkdir -p ~/.ssh
+    - 'which ssh-agent || ( apk add --no-cache openssh )'
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - chmod 700 ~/.ssh
+    - echo -e "Host *\n\tStrictHostKeyChecking no\n\tUserKnownHostsFile=/dev/null\n" > ~/.ssh/config
+
+build-app:
+  stage: build
+  script:
+    - docker build -t popcorn-app:${CI_COMMIT_SHORT_SHA} .
+    - docker save popcorn-app:${CI_COMMIT_SHORT_SHA} -o popcorn-app-${CI_COMMIT_SHORT_SHA}.tar
+  artifacts:
+    paths:
+      - popcorn-app-${CI_COMMIT_SHORT_SHA}.tar
+    expire_in: 1 week
+  rules:
+    - if: $CI_COMMIT_BRANCH
+
+deploy-prod:
+  stage: deploy
+  needs: ["build-app"]
+  environment:
+    name: production
+    url: http://$SERVER_HOST
+  script:
+    - scp popcorn-app-${CI_COMMIT_SHORT_SHA}.tar ${SERVER_USER}@${SERVER_HOST}:/root/
+    - scp docker-compose.yml ${SERVER_USER}@${SERVER_HOST}:/root/
+    - scp Dockerfile nginx.conf ${SERVER_USER}@${SERVER_HOST}:/root/
+    - ssh ${SERVER_USER}@${SERVER_HOST} "docker load -i /root/popcorn-app-${CI_COMMIT_SHORT_SHA}.tar || true"
+    - ssh ${SERVER_USER}@${SERVER_HOST} "mkdir -p /root/popcorn && mv /root/docker-compose.yml /root/nginx.conf /root/Dockerfile /root/popcorn/"
+    - ssh ${SERVER_USER}@${SERVER_HOST} "cd /root/popcorn && sed -i 's/build:.*/image: popcorn-app:${CI_COMMIT_SHORT_SHA}/' docker-compose.yml || true"
+    - ssh ${SERVER_USER}@${SERVER_HOST} "cd /root/popcorn && docker compose down || true && docker compose up -d"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+  variables:
+    GIT_STRATEGY: none
+
+# Required CI/CD variables to set in GitLab:
+# - SSH_PRIVATE_KEY: private key with access to server
+# - SERVER_HOST: 146.190.26.209
+# - SERVER_USER: root
+
+

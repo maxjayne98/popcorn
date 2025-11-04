@@ -20,18 +20,16 @@ watch(
   }
 );
 
-function updateQuery(value: string) {
-  if (value !== searchQuery.value) {
-    searchQuery.value = value;
-  }
-}
-
 async function handleSearch() {
   const query = searchQuery.value.trim();
   try {
+    if (!query) {
+      await router.push({ name: 'home' });
+      return;
+    }
     await router.push({
-      name: 'home',
-      query: query ? { q: query } : undefined,
+      name: 'search-results',
+      query: { q: query },
     });
   } catch (error) {
     // Ignore redundant navigation attempts
@@ -43,13 +41,7 @@ async function handleSearch() {
   <div class="app-shell">
     <AppHeader v-model="searchQuery" :is-searching="isSearching" @submit="handleSearch" />
     <main>
-      <RouterView v-slot="{ Component, route }">
-        <component
-          :is="Component"
-          v-bind="route.name === 'home' ? { searchQuery } : {}"
-          v-on="route.name === 'home' ? { 'update-search': updateQuery } : {}"
-        />
-      </RouterView>
+      <RouterView />
     </main>
   </div>
 </template>

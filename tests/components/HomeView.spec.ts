@@ -5,8 +5,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { defineComponent, h, ref, type Ref } from 'vue';
 import { setActivePinia, createPinia } from 'pinia';
 import HomeView from '@/views/HomeView.vue';
-import type { TVMazeShow, SearchResult } from '@/types/tvmaze';
-import { useSearchLoadingStore } from '@/stores/searchLoading';
+import type { TVMazeShow } from '@/types/tvmaze';
 import { useWatchlistStore } from '@/stores/watchlist';
 import { useRecentlyViewedStore } from '@/stores/recentlyViewed';
 import { useSearchCollectionsStore } from '@/stores/searchCollections';
@@ -17,9 +16,7 @@ let isLoadingRef: Ref<boolean>;
 let errorRef: Ref<string | null>;
 let loadShowsMock: ReturnType<typeof vi.fn>;
 let ensureShowMock: ReturnType<typeof vi.fn>;
-let searchShowsMock: ReturnType<typeof vi.fn>;
-let routerMock: { push: ReturnType<typeof vi.fn>; };
-let searchStore: ReturnType<typeof useSearchLoadingStore>;
+let routerMock: { push: ReturnType<typeof vi.fn> };
 let watchlistStore: ReturnType<typeof useWatchlistStore>;
 let recentlyViewedStore: ReturnType<typeof useRecentlyViewedStore>;
 let searchCollectionsStore: ReturnType<typeof useSearchCollectionsStore>;
@@ -32,7 +29,7 @@ vi.mock('@/composables/useShowCatalog', () => ({
     error: errorRef,
     loadShows: loadShowsMock,
     ensureShow: ensureShowMock,
-    searchShows: searchShowsMock,
+    searchShows: vi.fn(),
   }),
 }));
 
@@ -75,24 +72,6 @@ const GenreRailStub = defineComponent({
   },
 });
 
-const SearchResultsListStub = defineComponent({
-  name: 'SearchResultsListStub',
-  props: {
-    shows: {
-      type: Array,
-      default: () => [],
-    },
-  },
-  setup(props) {
-    return () =>
-      h(
-        'div',
-        { class: 'search-results-stub' },
-        (props.shows as TVMazeShow[]).map((show) => show.name).join(', ')
-      );
-  },
-});
-
 function createShow(overrides: Partial<TVMazeShow> = {}): TVMazeShow {
   const base: TVMazeShow = {
     id: 1,
@@ -125,10 +104,6 @@ function createShow(overrides: Partial<TVMazeShow> = {}): TVMazeShow {
   };
 }
 
-function createSearchResult(show: TVMazeShow, score = 1): SearchResult {
-  return { score, show };
-}
-
 describe('HomeView', () => {
   beforeEach(() => {
     allShowsRef = ref<TVMazeShow[]>([]);
@@ -138,14 +113,11 @@ describe('HomeView', () => {
 
     loadShowsMock = vi.fn().mockResolvedValue(undefined);
     ensureShowMock = vi.fn();
-    searchShowsMock = vi.fn();
     routerMock = {
-      push: vi.fn(),
+      push: vi.fn().mockResolvedValue(undefined),
     };
 
     setActivePinia(createPinia());
-    searchStore = useSearchLoadingStore();
-    searchStore.$reset();
     watchlistStore = useWatchlistStore();
     watchlistStore.clear();
     recentlyViewedStore = useRecentlyViewedStore();
@@ -173,14 +145,10 @@ describe('HomeView', () => {
     });
 
     const wrapper = mount(HomeView, {
-      props: {
-        searchQuery: '',
-      },
       global: {
         stubs: {
           ShowCard: ShowCardStub,
           GenreRail: GenreRailStub,
-          SearchResultsList: SearchResultsListStub,
         },
       },
     });
@@ -206,43 +174,34 @@ describe('HomeView', () => {
     expect(topCards.at(0)?.text()).toBe('Runner Up');
   });
 
-  it('performs search when query is provided and displays results', async () => {
-    const searchHit = createShow({ id: 21, name: 'Search Hit', rating: { average: 8.7 } });
-    const secondaryHit = createShow({ id: 22, name: 'Secondary', rating: { average: 7.5 } });
-    searchShowsMock.mockResolvedValue([
-      createSearchResult(searchHit, 1),
-      createSearchResult(secondaryHit, 0.9),
-    ]);
-    const setSearchingSpy = vi.spyOn(searchStore, 'setSearching');
+  it('renders saved searches and navigates when a shortcut is clicked', async () => {
+    const now = new Date().toISOString();
+    searchCollectionsStore.entries = [
+      { id: 'search-1', label: 'Space', query: 'Galaxy Quest', minRating: 7.5, createdAt: now },
+    ];
 
     const wrapper = mount(HomeView, {
-      props: {
-        searchQuery: ' Lost ',
-      },
       global: {
         stubs: {
           ShowCard: ShowCardStub,
           GenreRail: GenreRailStub,
-          SearchResultsList: SearchResultsListStub,
         },
       },
     });
 
     await flushPromises();
 
-    expect(searchShowsMock).toHaveBeenCalledTimes(1);
-    const [queryArg, signalArg] = searchShowsMock.mock.calls[0]!;
-    expect(queryArg).toBe('Lost');
-    expect(signalArg).toBeInstanceOf(AbortSignal);
+    const savedButtons = wrapper.findAll('.saved-searches__list button');
+    expect(savedButtons).toHaveLength(2); // apply + remove
+    await savedButtons[0]!.trigger('click');
 
-    expect(setSearchingSpy).toHaveBeenCalledWith(true);
-    expect(setSearchingSpy).toHaveBeenCalledWith(false);
-    expect(searchStore.isSearching).toBe(false);
+    expect(routerMock.push).toHaveBeenCalledWith({
+      name: 'search-results',
+      query: { q: 'Galaxy Quest', minRating: '7.5' },
+    });
 
-    const resultsStub = wrapper.find('.search-results-stub');
-    expect(resultsStub.exists()).toBe(true);
-    expect(resultsStub.text()).toContain('Search Hit');
-    expect(resultsStub.text()).toContain('Secondary');
+    await savedButtons[1]!.trigger('click');
+    expect(searchCollectionsStore.entries).toHaveLength(0);
   });
 
   it('displays watchlist rail when shows are pinned', async () => {
@@ -252,12 +211,10 @@ describe('HomeView', () => {
     watchlistStore.add(77);
 
     const wrapper = mount(HomeView, {
-      props: { searchQuery: '' },
       global: {
         stubs: {
           ShowCard: ShowCardStub,
           GenreRail: GenreRailStub,
-          SearchResultsList: SearchResultsListStub,
         },
       },
     });
@@ -278,12 +235,10 @@ describe('HomeView', () => {
     genreCollectionsRef.value = [];
 
     const wrapper = mount(HomeView, {
-      props: { searchQuery: '' },
       global: {
         stubs: {
           ShowCard: ShowCardStub,
           GenreRail: GenreRailStub,
-          SearchResultsList: SearchResultsListStub,
         },
       },
     });
@@ -300,42 +255,12 @@ describe('HomeView', () => {
     expect(recentlyViewedStore.items.length).toBe(0);
   });
 
-  it('surfaces search errors when the request fails', async () => {
-    searchShowsMock.mockRejectedValue(new Error('Search offline'));
-    const setSearchingSpy = vi.spyOn(searchStore, 'setSearching');
-    const wrapper = mount(HomeView, {
-      props: {
-        searchQuery: 'Drama',
-      },
-      global: {
-        stubs: {
-          ShowCard: ShowCardStub,
-          GenreRail: GenreRailStub,
-          SearchResultsList: SearchResultsListStub,
-        },
-      },
-    });
-
-    await flushPromises();
-
-    const errorMessage = wrapper.find('.state--error');
-    expect(errorMessage.exists()).toBe(true);
-    expect(errorMessage.text()).toContain('Search offline');
-    expect(setSearchingSpy).toHaveBeenCalledWith(true);
-    expect(setSearchingSpy).toHaveBeenLastCalledWith(false);
-    expect(searchStore.isSearching).toBe(false);
-  });
-
   it('renders catalog error state when loading fails', async () => {
     const wrapper = mount(HomeView, {
-      props: {
-        searchQuery: '',
-      },
       global: {
         stubs: {
           ShowCard: ShowCardStub,
           GenreRail: GenreRailStub,
-          SearchResultsList: SearchResultsListStub,
         },
       },
     });
@@ -371,14 +296,10 @@ describe('HomeView', () => {
     });
 
     const wrapper = mount(HomeView, {
-      props: {
-        searchQuery: '',
-      },
       global: {
         stubs: {
           ShowCard: ShowCardStub,
           GenreRail: GenreRailStub,
-          SearchResultsList: SearchResultsListStub,
         },
       },
     });

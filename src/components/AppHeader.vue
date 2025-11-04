@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { RouterLink } from 'vue-router';
+import SearchIcon from '@/components/icons/Search.vue';
 
 const props = defineProps<{
   modelValue: string;
@@ -54,7 +55,7 @@ function handleSubmit() {
         <span v-if="props.isSearching" aria-hidden="true" class="app-header__search-spinner" />
       </div>
       <button class="app-header__search-button" type="submit" :disabled="isSubmitDisabled">
-        Search
+        <SearchIcon aria-hidden="true" class="app-header__search-button-icon" />
       </button>
     </form>
   </header>
@@ -121,6 +122,9 @@ function handleSubmit() {
 }
 
 .app-header__search-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   padding: 0.6rem 1.4rem;
   border-radius: 999px;
   border: none;
@@ -144,6 +148,11 @@ function handleSubmit() {
 .app-header__search-button:focus-visible {
   outline: 3px solid rgba(255, 45, 85, 0.35);
   outline-offset: 2px;
+}
+
+.app-header__search-button-icon {
+  width: 1.1rem;
+  height: 1.1rem;
 }
 
 .app-header__search-spinner {

@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { RouterLink } from 'vue-router';
+import ShareIcon from '@/components/icons/Share.vue';
+import StarIcon from '@/components/icons/Star.vue';
+import TwitterIcon from '@/components/icons/Twitter.vue';
 import type { TVMazeShow } from '@/types/tvmaze';
 import { useParallaxBackground } from '@/composables/useParallaxBackground';
 import { useWatchlistStore } from '@/stores/watchlist';
@@ -96,7 +99,7 @@ function tweetShow(event: MouseEvent) {
         :aria-label="`Tweet about ${show.name}`"
         @click="tweetShow"
       >
-        <span aria-hidden="true">🐦</span>
+        <TwitterIcon aria-hidden="true" class="show-card__icon" />
       </button>
       <button
         type="button"
@@ -104,7 +107,7 @@ function tweetShow(event: MouseEvent) {
         :aria-label="`Share ${show.name}`"
         @click="shareShow"
       >
-        <span aria-hidden="true">⤴</span>
+        <ShareIcon aria-hidden="true" class="show-card__icon" />
       </button>
       <button
         type="button"
@@ -113,7 +116,7 @@ function tweetShow(event: MouseEvent) {
         :aria-label="isPinned ? `Remove ${show.name} from watchlist` : `Add ${show.name} to watchlist`"
         @click="toggleWatchlist"
       >
-        <span aria-hidden="true">{{ isPinned ? '★' : '☆' }}</span>
+        <StarIcon aria-hidden="true" class="show-card__icon show-card__pin-icon" />
       </button>
     </div>
     <div v-if="shareFeedback" class="show-card__feedback">{{ shareFeedback }}</div>
@@ -197,9 +200,23 @@ function tweetShow(event: MouseEvent) {
   color: rgba(180, 215, 255, 0.9);
 }
 
+.show-card__icon {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.show-card__pin-icon {
+  color: rgba(255, 255, 255, 0.75);
+  transition: color 150ms ease;
+}
+
 .show-card__pin[aria-pressed='true'] {
   background: rgba(255, 215, 0, 0.12);
   border-color: rgba(255, 215, 0, 0.65);
+  color: rgba(255, 215, 0, 0.95);
+}
+
+.show-card__pin[aria-pressed='true'] .show-card__pin-icon {
   color: rgba(255, 215, 0, 0.95);
 }
 
