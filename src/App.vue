@@ -41,7 +41,11 @@ async function handleSearch() {
   <div class="app-shell">
     <AppHeader v-model="searchQuery" :is-searching="isSearching" @submit="handleSearch" />
     <main>
-      <RouterView />
+      <RouterView v-slot="{ Component, route }">
+        <Transition name="route-fade" mode="out-in">
+          <component :is="Component" :key="route.fullPath" />
+        </Transition>
+      </RouterView>
     </main>
   </div>
 </template>

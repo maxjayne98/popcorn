@@ -133,3 +133,14 @@ main {
     padding-inline: 0;
   }
 }
+
+/* Route transition */
+.route-fade-enter-active,
+.route-fade-leave-active {
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+.route-fade-enter-from,
+.route-fade-leave-to {
+  opacity: 0;
+}

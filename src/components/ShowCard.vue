@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router';
 import ShareIcon from '@/components/icons/Share.vue';
 import StarIcon from '@/components/icons/Star.vue';
 import TwitterIcon from '@/components/icons/Twitter.vue';
+import { formatYear } from '@/utils/formatDate';
 import type { TVMazeShow } from '@/types/tvmaze';
 import { useParallaxBackground } from '@/composables/useParallaxBackground';
 import { useWatchlistStore } from '@/stores/watchlist';
@@ -14,7 +15,7 @@ const props = defineProps<{
 
 const imageSrc = computed(() => props.show.image?.medium ?? props.show.image?.original ?? '');
 const averageRating = computed(() => props.show.rating?.average ?? null);
-const premiereYear = computed(() => (props.show.premiered ? new Date(props.show.premiered).getFullYear() : null));
+const premiereYear = computed(() => formatYear(props.show.premiered) || null);
 const networkLabel = computed(() => props.show.network?.name ?? props.show.language ?? 'Uncategorized');
 const { parallaxStyle: posterParallaxStyle, onMouseEnter, onMouseLeave, onMouseMove } =
   useParallaxBackground({ range: 14 });

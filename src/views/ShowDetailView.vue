@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useShowCatalog } from '@/composables/useShowCatalog';
 import { useRecentlyViewedStore } from '@/stores/recentlyViewed';
+import { formatYear } from '@/utils/formatDate';
 import type { TVMazeShow } from '@/types/tvmaze';
 
 const props = defineProps<{
@@ -98,8 +99,8 @@ watch(
           <h1>{{ show.name }}</h1>
           <p class="show-detail__tags">
             <span v-if="show.status">{{ show.status }}</span>
-            <span v-if="show.premiered">Premiered {{ new Date(show.premiered).getFullYear() }}</span>
-            <span v-if="show.ended">Ended {{ new Date(show.ended).getFullYear() }}</span>
+            <span v-if="show.premiered">Premiered {{ formatYear(show.premiered) }}</span>
+            <span v-if="show.ended">Ended {{ formatYear(show.ended) }}</span>
           </p>
         </header>
         <div v-if="show.summary" class="show-detail__summary" v-html="show.summary" />
