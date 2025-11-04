@@ -41,7 +41,6 @@ const featuredSummary = computed(() => {
 });
 
 const visibleGenreChips = computed(() => props.genreChips.slice(0, 3));
-
 function handleHeroPlay() {
   const destination = props.show.officialSite ?? props.show.url;
   if (destination && typeof window !== 'undefined') {
@@ -254,5 +253,12 @@ function handleGenreClick(genre: string) {
   transform: translateY(-2px);
   border-color: rgba(255, 255, 255, 0.4);
   background: rgba(32, 18, 46, 0.75);
+}
+
+@media (max-width: 768px) {
+  .hero__summary,
+  .hero__subtitle {
+    display: none !important;
+  }
 }
 </style>
