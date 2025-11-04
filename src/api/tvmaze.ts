@@ -1,13 +1,32 @@
+import axios from 'axios';
 import type { SearchResult, TVMazeShow } from '@/types/tvmaze';
 
 const API_BASE = 'https://api.tvmaze.com';
+const apiClient = axios.create({
+  baseURL: API_BASE,
+  headers: {
+    Accept: 'application/json',
+  },
+});
 
 async function request<T>(path: string, signal?: AbortSignal): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, { signal });
-  if (!response.ok) {
-    throw new Error(`TVMaze request failed with status ${response.status}`);
+  try {
+    const { data } = await apiClient.get<T>(path, { signal });
+    return data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      if (error.code === 'ERR_CANCELED') {
+        throw error;
+      }
+      const status = error.response?.status;
+      const message = status ? `TVMaze request failed with status ${status}` : error.message || 'TVMaze request failed.';
+      throw new Error(message);
+    }
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('TVMaze request failed.');
   }
-  return (await response.json()) as T;
 }
 
 export async function fetchShowsPage(page: number, signal?: AbortSignal): Promise<TVMazeShow[]> {
