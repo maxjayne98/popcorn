@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useShowCatalog } from '@/composables/useShowCatalog';
 import { useRecentlyViewedStore } from '@/stores/recentlyViewed';
+import AsyncState from '@/components/AsyncState.vue';
 import { formatYear } from '@/utils/formatDate';
 import type { TVMazeShow } from '@/types/tvmaze';
 
@@ -49,15 +50,22 @@ async function loadShowDetails(identifier: string) {
   }
   isLoading.value = true;
   error.value = null;
-  const result = await ensureShow(numericId);
-  if (!result) {
-    error.value = 'Show not found. It may have been removed.';
+  try {
+    const result = await ensureShow(numericId);
+    if (!result) {
+      error.value = 'Show not found. It may have been removed.';
+      show.value = null;
+    } else {
+      show.value = result;
+      recentlyViewed.add(result);
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unable to load show details.';
+    error.value = message;
     show.value = null;
-  } else {
-    show.value = result;
-    recentlyViewed.add(result);
+  } finally {
+    isLoading.value = false;
   }
-  isLoading.value = false;
 }
 
 function goBack() {
@@ -80,12 +88,9 @@ watch(
 <template>
   <div class="page-container">
     <button class="back-button" type="button" @click="goBack">← Back</button>
-    <section v-if="isLoading" class="state">Loading show details...</section>
-    <section v-else-if="error" class="state state--error">
-      {{ error }}
-    </section>
-    <article v-else-if="show" class="show-detail">
-      <div class="show-detail__poster">
+    <AsyncState :is-loading="isLoading" :error="error" loading-message="Loading show details...">
+      <article v-if="show" class="show-detail">
+        <div class="show-detail__poster">
         <img v-if="poster" :alt="`${show.name} poster`" :src="poster" loading="lazy" />
         <div v-else class="show-detail__poster-placeholder">
           <span>{{ show.name.charAt(0).toUpperCase() }}</span>
@@ -93,47 +98,48 @@ watch(
         <span v-if="averageRating" class="show-detail__badge">
           ⭐ {{ averageRating.toFixed(1) }}
         </span>
-      </div>
-      <div class="show-detail__content">
-        <header>
-          <h1>{{ show.name }}</h1>
-          <p class="show-detail__tags">
-            <span v-if="show.status">{{ show.status }}</span>
-            <span v-if="show.premiered">Premiered {{ formatYear(show.premiered) }}</span>
-            <span v-if="show.ended">Ended {{ formatYear(show.ended) }}</span>
-          </p>
-        </header>
-        <div v-if="show.summary" class="show-detail__summary" v-html="show.summary" />
-        <dl class="show-detail__meta">
-          <div v-if="show.genres.length">
-            <dt>Genres</dt>
-            <dd>{{ show.genres.join(', ') }}</dd>
-          </div>
-          <div v-if="formattedSchedule">
-            <dt>Schedule</dt>
-            <dd>{{ formattedSchedule }}</dd>
-          </div>
-          <div v-if="show.language">
-            <dt>Language</dt>
-            <dd>{{ show.language }}</dd>
-          </div>
-          <div v-if="show.runtime">
-            <dt>Runtime</dt>
-            <dd>{{ show.runtime }} min</dd>
-          </div>
-          <div v-if="networks">
-            <dt>Networks</dt>
-            <dd>{{ networks }}</dd>
-          </div>
-        </dl>
-        <div class="show-detail__links">
-          <a v-if="show.url" :href="show.url" target="_blank" rel="noopener">View on TVMaze</a>
-          <a v-if="show.officialSite" :href="show.officialSite" target="_blank" rel="noopener">
-            Official Site
-          </a>
         </div>
-      </div>
-    </article>
+        <div class="show-detail__content">
+          <header>
+            <h1>{{ show.name }}</h1>
+            <p class="show-detail__tags">
+              <span v-if="show.status">{{ show.status }}</span>
+              <span v-if="show.premiered">Premiered {{ formatYear(show.premiered) }}</span>
+              <span v-if="show.ended">Ended {{ formatYear(show.ended) }}</span>
+            </p>
+          </header>
+          <div v-if="show.summary" class="show-detail__summary" v-html="show.summary" />
+          <dl class="show-detail__meta">
+            <div v-if="show.genres.length">
+              <dt>Genres</dt>
+              <dd>{{ show.genres.join(', ') }}</dd>
+            </div>
+            <div v-if="formattedSchedule">
+              <dt>Schedule</dt>
+              <dd>{{ formattedSchedule }}</dd>
+            </div>
+            <div v-if="show.language">
+              <dt>Language</dt>
+              <dd>{{ show.language }}</dd>
+            </div>
+            <div v-if="show.runtime">
+              <dt>Runtime</dt>
+              <dd>{{ show.runtime }} min</dd>
+            </div>
+            <div v-if="networks">
+              <dt>Networks</dt>
+              <dd>{{ networks }}</dd>
+            </div>
+          </dl>
+          <div class="show-detail__links">
+            <a v-if="show.url" :href="show.url" target="_blank" rel="noopener">View on TVMaze</a>
+            <a v-if="show.officialSite" :href="show.officialSite" target="_blank" rel="noopener">
+              Official Site
+            </a>
+          </div>
+        </div>
+      </article>
+    </AsyncState>
   </div>
 </template>
 
@@ -152,19 +158,6 @@ watch(
 .back-button:hover {
   border-color: rgba(255, 45, 85, 0.6);
   color: rgba(255, 144, 164, 0.9);
-}
-
-.state {
-  margin: 0;
-  padding: 2rem;
-  text-align: center;
-  background: var(--surface-color);
-  border-radius: 1rem;
-}
-
-.state--error {
-  border: 1px solid rgba(255, 95, 109, 0.45);
-  color: #ff9aa2;
 }
 
 .show-detail {

@@ -268,7 +268,7 @@ describe('HomeView', () => {
     errorRef.value = 'API unavailable';
     await flushPromises();
 
-    const catalogError = wrapper.find('.state--error');
+    const catalogError = wrapper.find('.async-state--error');
     expect(catalogError.text()).toContain('Unable to load shows right now. API unavailable');
 
     errorRef.value = null;
@@ -276,7 +276,7 @@ describe('HomeView', () => {
     genreCollectionsRef.value = [];
     await flushPromises();
 
-    const loadingState = wrapper.find('.state');
+    const loadingState = wrapper.find('.async-state--loading');
     expect(loadingState.text()).toContain('Loading shows...');
   });
 

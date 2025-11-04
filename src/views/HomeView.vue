@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router';
 import CustomSelect from '@/components/CustomSelect.vue';
 import GenreRail from '@/components/GenreRail.vue';
 import ShowCard from '@/components/ShowCard.vue';
+import AsyncState from '@/components/AsyncState.vue';
 import { useShowCatalog } from '@/composables/useShowCatalog';
 import { useParallaxBackground } from '@/composables/useParallaxBackground';
 import { useWatchlistStore } from '@/stores/watchlist';
@@ -420,20 +421,21 @@ function removeSavedSearch(id: string) {
     </section>
 
     <section class="page-section">
-      <p v-if="error" class="state state--error">
-        Unable to load shows right now. {{ error }}
-      </p>
-      <div v-else-if="isLoading && !genreCollections.length" class="state">Loading shows...</div>
-      <template v-else>
+      <AsyncState
+        :is-loading="isLoading && !genreCollections.length"
+        :error="error"
+        loading-message="Loading shows..."
+        error-prefix="Unable to load shows right now."
+      >
         <div class="genre-grid">
           <GenreRail
-          v-for="collection in filteredGenreCollections"
-          :key="collection.genre"
-          :genre="collection.genre"
-          :shows="collection.shows"
-        />
+            v-for="collection in filteredGenreCollections"
+            :key="collection.genre"
+            :genre="collection.genre"
+            :shows="collection.shows"
+          />
         </div>
-      </template>
+      </AsyncState>
     </section>
   </div>
 </template>

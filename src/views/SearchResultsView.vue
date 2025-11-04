@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import AsyncState from '@/components/AsyncState.vue';
 import SearchResultsList from '@/components/SearchResultsList.vue';
 import { useShowCatalog } from '@/composables/useShowCatalog';
 import { useSearchLoading } from '@/composables/useSearchLoading';
@@ -224,13 +225,18 @@ onBeforeUnmount(() => {
       </ul>
     </section>
 
-    <p v-if="searchError" class="state state--error">
-      {{ searchError }}
-    </p>
-    <p v-else-if="!searchResults.length && !isSearching && activeQuery" class="state">
-      No shows matched your search yet.
-    </p>
-    <SearchResultsList v-else-if="searchResults.length" :shows="searchResults" />
+    <AsyncState
+      v-if="activeQuery"
+      :is-loading="isSearching"
+      :error="searchError"
+      loading-message="Searching…"
+    >
+      <template #error="{ error }">
+        <p class="state state--error">{{ error }}</p>
+      </template>
+      <p v-if="!searchResults.length" class="state">No shows matched your search yet.</p>
+      <SearchResultsList v-else :shows="searchResults" />
+    </AsyncState>
   </div>
 </template>
 

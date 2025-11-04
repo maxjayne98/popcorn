@@ -6,7 +6,7 @@ import { createPinia, setActivePinia } from 'pinia';
 import { useRecentlyViewedStore } from '@/stores/recentlyViewed';
 import ShowDetailView from '@/views/ShowDetailView.vue';
 
-const ensureShow = vi.fn<(id: number) => Promise<any>>();
+const ensureShow = vi.fn<(id: number, signal?: AbortSignal) => Promise<unknown>>();
 const back = vi.fn();
 const push = vi.fn();
 
@@ -109,6 +109,34 @@ describe('ShowDetailView', () => {
     await flushPromises();
 
     expect(wrapper.text()).toContain('Show not found. It may have been removed.');
+  });
+
+  it('shows loading indicator while fetching', async () => {
+    let resolveShow: (value: unknown) => void;
+    const pending = new Promise((resolve) => {
+      resolveShow = resolve;
+    });
+    // @ts-expect-error controlled promise assignment
+    ensureShow.mockReturnValue(pending);
+
+    const wrapper = mountView('7');
+
+    expect(wrapper.find('.async-state--loading').exists()).toBe(true);
+    resolveShow!(createShow());
+    await flushPromises();
+
+    expect(wrapper.find('.async-state--loading').exists()).toBe(false);
+  });
+
+  it('renders error state when fetch fails', async () => {
+    ensureShow.mockRejectedValue(new Error('Backend unavailable'));
+
+    const wrapper = mountView('7');
+    await flushPromises();
+
+    const errorState = wrapper.find('.async-state--error');
+    expect(errorState.exists()).toBe(true);
+    expect(errorState.text()).toContain('Backend unavailable');
   });
 
   it('navigates back or home depending on history length', async () => {
