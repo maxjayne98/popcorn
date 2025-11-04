@@ -154,6 +154,7 @@ function tweetShow(event: MouseEvent) {
   grid-template-rows: auto 1fr;
   width: 200px;
   min-width: 200px;
+  max-width: 100%;
   border-radius: 1rem;
   overflow: hidden;
   background: linear-gradient(145deg, rgba(38, 8, 14, 0.92), rgba(18, 6, 10, 0.85));
@@ -171,6 +172,13 @@ function tweetShow(event: MouseEvent) {
   display: flex;
   gap: 0.35rem;
   z-index: 2;
+}
+
+@media (max-width: 560px) {
+  .show-card {
+    width: 100%;
+    min-width: 0;
+  }
 }
 
 .show-card__tweet,

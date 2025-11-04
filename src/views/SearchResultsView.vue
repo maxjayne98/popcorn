@@ -3,11 +3,14 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import AsyncState from '@/components/AsyncState.vue';
 import SearchResultsList from '@/components/SearchResultsList.vue';
+import RangeInput from '@/components/RangeInput.vue';
 import { useShowCatalog } from '@/composables/useShowCatalog';
 import { useSearchLoading } from '@/composables/useSearchLoading';
 import { useSearchCollectionsStore } from '@/stores/searchCollections';
 import type { SavedSearch } from '@/stores/searchCollections';
 import type { TVMazeShow } from '@/types/tvmaze';
+import SaveIcon from '@/components/icons/Save.vue';
+
 
 const route = useRoute();
 const router = useRouter();
@@ -194,8 +197,7 @@ onBeforeUnmount(() => {
     <div v-if="activeQuery" class="search-tools">
       <label class="search-tools__rating">
         <span>Minimum rating</span>
-        <input type="range" min="0" max="10" step="0.5" v-model.number="searchMinRating" />
-        <span class="search-tools__value">⭐ {{ searchMinRating.toFixed(1) }}</span>
+        <RangeInput v-model="searchMinRating" :min="0" :max="10" :step="0.5" value-prefix="⭐ " />
       </label>
       <div class="search-tools__save">
         <input
@@ -204,7 +206,9 @@ onBeforeUnmount(() => {
           placeholder="Label this search"
           aria-label="Saved search label"
         />
-        <button type="button" @click="saveCurrentSearch">Save Search</button>
+        <button type="button" class="search-tools__save-button" @click="saveCurrentSearch">
+          <SaveIcon aria-hidden="true" />
+        </button>
       </div>
     </div>
 
@@ -243,8 +247,8 @@ onBeforeUnmount(() => {
 <style scoped lang="scss">
 .search-page {
   display: grid;
-  gap: 1.5rem;
-  padding-block: 1.5rem;
+  gap: clamp(1.5rem, 3vw, 2.5rem);
+  padding-block: clamp(1.5rem, 3vw, 3rem);
 }
 
 .section-header h1 {
@@ -252,26 +256,26 @@ onBeforeUnmount(() => {
 }
 
 .search-tools {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   gap: 0.75rem;
   align-items: center;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  border-radius: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(24, 16, 28, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .search-tools__rating {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
   color: rgba(255, 255, 255, 0.75);
 }
 
-.search-tools__rating input[type='range'] {
-  accent-color: var(--accent-color, #ff2d55);
-}
-
-.search-tools__value {
-  font-weight: 600;
-  color: rgba(255, 215, 0, 0.9);
+.search-tools__rating span {
+  font-size: 0.9rem;
+  min-width: 7rem;
 }
 
 .search-tools__save {
@@ -281,11 +285,73 @@ onBeforeUnmount(() => {
 }
 
 .search-tools__save input {
-  padding: 0.4rem 0.75rem;
+  flex: 1;
+  padding: 0.65rem 1rem;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(20, 12, 28, 0.75);
-  color: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(20, 20, 34, 0.85);
+  color: white;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.search-tools__save input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px rgba(255, 45, 85, 0.25);
+}
+
+.search-tools__save-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.55rem 1.2rem;
+  border-radius: 999px;
+  border: 1px solid var(--accent-color, #ff2d55);
+  font-weight: 600;
+  background: transparent;
+  color: var(--dark-900);
+  cursor: pointer;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+.search-tools__save-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 18px rgba(255, 45, 85, 0.25);
+}
+
+.search-tools__save-button:focus-visible {
+  outline: 3px solid rgba(255, 45, 85, 0.35);
+  outline-offset: 2px;
+}
+
+.search-tools__save-button svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+@media (max-width: 640px) {
+  .search-tools {
+    padding: 0.75rem;
+    gap: 0.6rem;
+  }
+
+  .search-tools__rating {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-tools__rating span {
+    min-width: auto;
+  }
+
+  .search-tools__save {
+    width: 100%;
+  }
+
+  .search-tools__save input {
+    flex: 1;
+  }
 }
 
 .saved-searches {
@@ -333,5 +399,29 @@ onBeforeUnmount(() => {
 
 .state--error {
   color: #ff6584;
+}
+
+@media (max-width: 640px) {
+  .search-tools {
+    padding: 0.75rem;
+    gap: 0.6rem;
+  }
+
+  .search-tools__rating {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-tools__rating span {
+    min-width: auto;
+  }
+
+  .search-tools__save {
+    width: 100%;
+  }
+
+  .search-tools__save input {
+    flex: 1;
+  }
 }
 </style>

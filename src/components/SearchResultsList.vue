@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { TVMazeShow } from '@/types/tvmaze';
-import ShowCard from '@/components/ShowCard.vue';
+import SearchResultItem from '@/components/SearchResultItem.vue';
 
 defineProps<{
   shows: TVMazeShow[];
@@ -9,12 +9,11 @@ defineProps<{
 
 <template>
   <section class="search-results">
-    <div v-if="shows.length" class="search-results__grid" role="list">
-      <ShowCard
+    <div v-if="shows.length" class="search-results__list" role="list">
+      <SearchResultItem
         v-for="show in shows"
         :key="show.id"
         :show="show"
-        class="search-results__card"
         role="listitem"
       />
     </div>
@@ -27,14 +26,12 @@ defineProps<{
 <style scoped lang="scss">
 .search-results {
   display: grid;
-  gap: 1rem;
+  gap: clamp(1rem, 2vw, 2.5rem);
 }
 
-.search-results__grid {
+.search-results__list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1rem;
-  padding-bottom: 2rem;
+  gap: clamp(1rem, 2.5vw, 2rem);
 }
 
 .search-results__empty {
