@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { RouterLink } from 'vue-router';
 import SearchIcon from '@/components/icons/Search.vue';
+import SearchInput from '@/components/SearchInput.vue';
 
 const props = defineProps<{
   modelValue: string;
@@ -26,11 +27,9 @@ watch(
 
 const isSubmitDisabled = computed(() => !localQuery.value.trim());
 
-function handleInput(event: Event) {
-  const value = (event.target as HTMLInputElement).value;
-  localQuery.value = value;
+watch(localQuery, (value) => {
   emit('update:modelValue', value);
-}
+});
 
 function handleSubmit() {
   emit('update:modelValue', localQuery.value);
@@ -42,18 +41,16 @@ function handleSubmit() {
   <header class="app-header">
     <RouterLink class="app-header__brand" to="/">Popcorn</RouterLink>
     <form class="app-header__search" role="search" @submit.prevent="handleSubmit">
-      <div class="app-header__search-input">
-        <input
-          :value="localQuery"
-          aria-label="Search for TV shows"
-          autocomplete="off"
-          name="search"
-          placeholder="Search shows..."
-          type="search"
-          @input="handleInput"
-        />
-        <span v-if="props.isSearching" aria-hidden="true" class="app-header__search-spinner" />
-      </div>
+      <SearchInput
+        v-model="localQuery"
+        class="app-header__search-input"
+        aria-label="Search for TV shows"
+        autocomplete="off"
+        name="search"
+        placeholder="Search shows..."
+        :loading="props.isSearching"
+        @enter="handleSubmit"
+      />
       <button class="app-header__search-button" type="submit" :disabled="isSubmitDisabled">
         <SearchIcon aria-hidden="true" class="app-header__search-button-icon" />
       </button>
@@ -99,26 +96,7 @@ function handleSubmit() {
 }
 
 .app-header__search-input {
-  position: relative;
-  flex: 1;
-  display: flex;
-}
-
-.app-header__search-input input {
-  flex: 1;
-  padding: 0.65rem 1rem;
-  padding-right: 2.5rem;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(20, 20, 34, 0.85);
-  color: white;
-  transition: border-color 150ms ease, box-shadow 150ms ease;
-}
-
-.app-header__search-input input:focus {
-  outline: none;
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 3px rgba(255, 45, 85, 0.25);
+  flex: 1 1 auto;
 }
 
 .app-header__search-button {
@@ -153,25 +131,6 @@ function handleSubmit() {
 .app-header__search-button-icon {
   width: 1.1rem;
   height: 1.1rem;
-}
-
-.app-header__search-spinner {
-  position: absolute;
-  right: 0.9rem;
-  top: 50%;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-top-color: rgba(255, 255, 255, 0.7);
-  transform: translateY(-50%);
-  animation: spin 650ms linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: translateY(-50%) rotate(360deg);
-  }
 }
 
 @media (max-width: 640px) {

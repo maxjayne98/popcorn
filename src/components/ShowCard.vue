@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router';
 import ShareIcon from '@/components/icons/Share.vue';
 import StarIcon from '@/components/icons/Star.vue';
 import TwitterIcon from '@/components/icons/Twitter.vue';
+import MediaActionButton from '@/components/MediaActionButton.vue';
 import { formatYear } from '@/utils/formatDate';
 import type { TVMazeShow } from '@/types/tvmaze';
 import { useParallaxBackground } from '@/composables/useParallaxBackground';
@@ -95,31 +96,26 @@ function tweetShow(event: MouseEvent) {
     @mousemove="onMouseMove"
   >
     <div class="show-card__controls">
-      <button
-        type="button"
-        class="show-card__tweet"
+      <MediaActionButton
+        class="show-card__action show-card__tweet"
+        :icon="TwitterIcon"
         :aria-label="`Tweet about ${show.name}`"
-        @click="tweetShow"
-      >
-        <TwitterIcon aria-hidden="true" class="show-card__icon" />
-      </button>
-      <button
-        type="button"
-        class="show-card__share"
+        @click.stop="tweetShow"
+      />
+      <MediaActionButton
+        class="show-card__action show-card__share"
+        :icon="ShareIcon"
         :aria-label="`Share ${show.name}`"
-        @click="shareShow"
-      >
-        <ShareIcon aria-hidden="true" class="show-card__icon" />
-      </button>
-      <button
-        type="button"
-        class="show-card__pin"
-        :aria-pressed="isPinned"
+        @click.stop="shareShow"
+      />
+      <MediaActionButton
+        class="show-card__action show-card__pin"
+        :icon="StarIcon"
         :aria-label="isPinned ? `Remove ${show.name} from watchlist` : `Add ${show.name} to watchlist`"
-        @click="toggleWatchlist"
-      >
-        <StarIcon aria-hidden="true" class="show-card__icon show-card__pin-icon" />
-      </button>
+        variant="pin"
+        :pressed="isPinned"
+        @click.stop="toggleWatchlist"
+      />
     </div>
     <div v-if="shareFeedback" class="show-card__feedback">{{ shareFeedback }}</div>
     <div class="show-card__poster" :style="posterParallaxStyle">
@@ -181,56 +177,8 @@ function tweetShow(event: MouseEvent) {
   }
 }
 
-.show-card__tweet,
-.show-card__share,
-.show-card__pin {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  background: rgba(18, 8, 26, 0.72);
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 1.05rem;
-  cursor: pointer;
-  transition: transform 150ms ease, border-color 150ms ease, background 150ms ease, color 150ms ease;
-}
-
-.show-card__tweet:hover,
-.show-card__share:hover,
-.show-card__pin:hover {
-  transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.6);
-}
-
-.show-card__tweet:hover {
-  color: rgba(150, 210, 255, 0.9);
-}
-
-.show-card__share:hover {
-  color: rgba(180, 215, 255, 0.9);
-}
-
-.show-card__icon {
-  width: 1.1rem;
-  height: 1.1rem;
-}
-
-.show-card__pin-icon {
-  color: rgba(255, 255, 255, 0.75);
-  transition: color 150ms ease;
-}
-
-.show-card__pin[aria-pressed='true'] {
-  background: rgba(255, 215, 0, 0.12);
-  border-color: rgba(255, 215, 0, 0.65);
-  color: rgba(255, 215, 0, 0.95);
-}
-
-.show-card__pin[aria-pressed='true'] .show-card__pin-icon {
-  color: rgba(255, 215, 0, 0.95);
+.show-card__action {
+  transition: transform 150ms ease;
 }
 
 .show-card__feedback {

@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router';
 import ShareIcon from '@/components/icons/Share.vue';
 import StarIcon from '@/components/icons/Star.vue';
 import TwitterIcon from '@/components/icons/Twitter.vue';
+import MediaActionButton from '@/components/MediaActionButton.vue';
 import { formatYear } from '@/utils/formatDate';
 import type { TVMazeShow } from '@/types/tvmaze';
 import { useWatchlistStore } from '@/stores/watchlist';
@@ -112,31 +113,26 @@ function tweetShow(event: MouseEvent) {
           </p>
         </div>
         <div class="result-item__actions">
-          <button
-            type="button"
+          <MediaActionButton
             class="result-item__action"
+            :icon="TwitterIcon"
             :aria-label="`Tweet about ${show.name}`"
             @click.stop="tweetShow"
-          >
-            <TwitterIcon aria-hidden="true" />
-          </button>
-          <button
-            type="button"
+          />
+          <MediaActionButton
             class="result-item__action"
+            :icon="ShareIcon"
             :aria-label="`Share ${show.name}`"
             @click.stop="shareShow"
-          >
-            <ShareIcon aria-hidden="true" />
-          </button>
-          <button
-            type="button"
+          />
+          <MediaActionButton
             class="result-item__action result-item__action--pin"
-            :aria-pressed="isPinned"
+            :icon="StarIcon"
+            variant="pin"
+            :pressed="isPinned"
             :aria-label="isPinned ? `Remove ${show.name} from watchlist` : `Add ${show.name} to watchlist`"
             @click.stop="toggleWatchlist"
-          >
-            <StarIcon aria-hidden="true" />
-          </button>
+          />
         </div>
       </header>
       <p v-if="summary" class="result-item__summary">{{ summary }}</p>
@@ -265,33 +261,7 @@ function tweetShow(event: MouseEvent) {
 }
 
 .result-item__action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  background: rgba(14, 10, 18, 0.75);
-  color: rgba(255, 255, 255, 0.8);
-  cursor: pointer;
-  transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
-}
-
-.result-item__action:hover {
-  transform: translateY(-1px);
-  border-color: rgba(255, 255, 255, 0.4);
-  background: rgba(26, 18, 32, 0.85);
-}
-
-.result-item__action svg {
-  width: 1rem;
-  height: 1rem;
-}
-
-.result-item__action--pin[aria-pressed='true'] {
-  border-color: rgba(255, 215, 0, 0.65);
-  color: rgba(255, 215, 0, 0.95);
+  transition: transform 150ms ease;
 }
 
 .result-item__feedback {

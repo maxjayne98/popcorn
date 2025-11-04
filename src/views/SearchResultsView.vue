@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import AsyncState from '@/components/AsyncState.vue';
 import SearchResultsList from '@/components/SearchResultsList.vue';
 import RangeInput from '@/components/RangeInput.vue';
+import SearchInput from '@/components/SearchInput.vue';
 import { useShowCatalog } from '@/composables/useShowCatalog';
 import { useSearchLoading } from '@/composables/useSearchLoading';
 import { useSearchCollectionsStore } from '@/stores/searchCollections';
@@ -200,8 +201,9 @@ onBeforeUnmount(() => {
         <RangeInput v-model="searchMinRating" :min="0" :max="10" :step="0.5" value-prefix="⭐ " />
       </label>
       <div class="search-tools__save">
-        <input
+        <SearchInput
           v-model="savedSearchLabel"
+          class="search-tools__save-input"
           type="text"
           placeholder="Label this search"
           aria-label="Saved search label"
@@ -284,20 +286,8 @@ onBeforeUnmount(() => {
   align-items: center;
 }
 
-.search-tools__save input {
+.search-tools__save-input {
   flex: 1;
-  padding: 0.65rem 1rem;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(20, 20, 34, 0.85);
-  color: white;
-  transition: border-color 150ms ease, box-shadow 150ms ease;
-}
-
-.search-tools__save input:focus {
-  outline: none;
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 3px rgba(255, 45, 85, 0.25);
 }
 
 .search-tools__save-button {
