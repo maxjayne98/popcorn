@@ -1,42 +1,17 @@
 import { ref } from 'vue';
 import { defineStore } from 'pinia';
+import { loadArrayFromStorage, saveArrayToStorage } from '@/utils/storage';
 
 const STORAGE_KEY = 'popcorn-watchlist';
 
-function loadInitialIds(): number[] {
-  if (typeof window === 'undefined') {
-    return [];
-  }
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      return parsed.filter((value) => typeof value === 'number');
-    }
-  } catch (error) {
-    console.warn('Failed to parse watchlist storage', error);
-  }
-  return [];
-}
-
-function persistIds(ids: number[]) {
-  if (typeof window === 'undefined') {
-    return;
-  }
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
-  } catch (error) {
-    console.warn('Failed to persist watchlist', error);
-  }
-}
+const isNumber = (value: unknown): value is number => typeof value === 'number';
 
 export const useWatchlistStore = defineStore('watchlist', () => {
-  const pinnedIds = ref<number[]>(loadInitialIds());
+  const pinnedIds = ref<number[]>(loadArrayFromStorage(STORAGE_KEY, isNumber));
 
   function setPinnedIds(ids: number[]) {
     pinnedIds.value = ids;
-    persistIds(ids);
+    saveArrayToStorage(STORAGE_KEY, ids);
   }
 
   function toggle(id: number) {
@@ -64,7 +39,7 @@ export const useWatchlistStore = defineStore('watchlist', () => {
   }
 
   function $reset() {
-    setPinnedIds(loadInitialIds());
+    setPinnedIds(loadArrayFromStorage(STORAGE_KEY, isNumber));
   }
 
   const isPinned = (id: number) => pinnedIds.value.includes(id);

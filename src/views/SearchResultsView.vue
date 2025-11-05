@@ -199,7 +199,6 @@ onBeforeUnmount(() => {
           :min="0"
           :max="10"
           :step="0.5"
-          value-prefix="IMDb "
           :show-value="true"
         />
       </label>

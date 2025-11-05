@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 import { defineStore } from 'pinia';
+import { loadArrayFromStorage, saveArrayToStorage } from '@/utils/storage';
 
 export interface SavedSearch {
   id: string;
@@ -11,40 +12,26 @@ export interface SavedSearch {
 
 const STORAGE_KEY = 'popcorn-saved-searches';
 
-function loadInitial(): SavedSearch[] {
-  if (typeof window === 'undefined') {
-    return [];
+const isSavedSearch = (entry: unknown): entry is SavedSearch => {
+  if (typeof entry !== 'object' || entry === null) {
+    return false;
   }
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      return parsed.filter((entry) => entry && typeof entry.id === 'string');
-    }
-  } catch (error) {
-    console.warn('Failed to parse saved searches', error);
-  }
-  return [];
-}
-
-function persist(searches: SavedSearch[]) {
-  if (typeof window === 'undefined') {
-    return;
-  }
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(searches));
-  } catch (error) {
-    console.warn('Failed to persist saved searches', error);
-  }
-}
+  const candidate = entry as Record<string, unknown>;
+  return (
+    typeof candidate.id === 'string' &&
+    typeof candidate.label === 'string' &&
+    typeof candidate.query === 'string' &&
+    typeof candidate.minRating === 'number' &&
+    (candidate.createdAt === undefined || typeof candidate.createdAt === 'string')
+  );
+};
 
 export const useSearchCollectionsStore = defineStore('search-collections', () => {
-  const entries = ref<SavedSearch[]>(loadInitial());
+  const entries = ref<SavedSearch[]>(loadArrayFromStorage(STORAGE_KEY, isSavedSearch));
 
   function setEntries(next: SavedSearch[]) {
     entries.value = next;
-    persist(entries.value);
+    saveArrayToStorage(STORAGE_KEY, entries.value);
   }
 
   function add(label: string, query: string, minRating: number) {
@@ -71,7 +58,7 @@ export const useSearchCollectionsStore = defineStore('search-collections', () =>
   }
 
   function $reset() {
-    setEntries(loadInitial());
+    setEntries(loadArrayFromStorage(STORAGE_KEY, isSavedSearch));
   }
 
   return {
