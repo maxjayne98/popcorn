@@ -9,7 +9,6 @@ describe('AppHeader', () => {
     const wrapper = mount(AppHeader, {
       props: {
         modelValue: '',
-        isSearching: false,
       },
       global: {
         stubs: {
@@ -32,7 +31,6 @@ describe('AppHeader', () => {
     const wrapper = mount(AppHeader, {
       props: {
         modelValue: '',
-        isSearching: true,
       },
       global: {
         stubs: {
@@ -42,9 +40,9 @@ describe('AppHeader', () => {
     });
 
     expect(wrapper.get('.app-header__search-button').attributes('disabled')).toBeDefined();
-    expect(wrapper.find('.search-input__spinner').exists()).toBe(true);
+    expect(wrapper.find('.search-input__spinner').exists()).toBe(false);
 
-    await wrapper.setProps({ modelValue: 'Severance', isSearching: false });
+    await wrapper.setProps({ modelValue: 'Severance' });
     expect(wrapper.get('input').element.value).toBe('Severance');
     expect(wrapper.get('.app-header__search-button').attributes('disabled')).toBeUndefined();
   });
