@@ -6,7 +6,6 @@ import SearchResultsList from '@/components/SearchResultsList.vue';
 import RangeInput from '@/components/RangeInput.vue';
 import SearchInput from '@/components/SearchInput.vue';
 import { useShowCatalog } from '@/composables/useShowCatalog';
-import { useSearchLoading } from '@/composables/useSearchLoading';
 import { useSearchCollectionsStore } from '@/stores/searchCollections';
 import type { SavedSearch } from '@/stores/searchCollections';
 import type { TVMazeShow } from '@/types/tvmaze';
@@ -17,7 +16,6 @@ import ImdbIcon from '@/components/icons/ImdbIcon.vue';
 const route = useRoute();
 const router = useRouter();
 const { searchShows } = useShowCatalog();
-const { setSearching } = useSearchLoading();
 const searchCollectionsStore = useSearchCollectionsStore();
 
 const searchResults = ref<TVMazeShow[]>([]);
@@ -54,7 +52,6 @@ async function performSearch(query: string) {
   if (!normalized) {
     searchResults.value = [];
     lastSearchResults.value = [];
-    setSearching(false);
     isSearching.value = false;
     return;
   }
@@ -62,7 +59,6 @@ async function performSearch(query: string) {
   const controller = new AbortController();
   activeController = controller;
   isSearching.value = true;
-  setSearching(true);
 
   try {
     const results = await searchShows(normalized, controller.signal);
@@ -90,7 +86,6 @@ async function performSearch(query: string) {
   } finally {
     if (!controller.signal.aborted) {
       isSearching.value = false;
-      setSearching(false);
       activeController = null;
     }
   }
@@ -176,16 +171,11 @@ watch(
   { immediate: true }
 );
 
-onMounted(() => {
-  if (!activeQuery.value) {
-    setSearching(false);
-  }
-});
+
 
 onBeforeUnmount(() => {
   activeController?.abort();
   isSearching.value = false;
-  setSearching(false);
 });
 </script>
 

@@ -6,7 +6,6 @@ import SearchInput from '@/components/SearchInput.vue';
 
 const props = defineProps<{
   modelValue: string;
-  isSearching?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -48,7 +47,6 @@ function handleSubmit() {
         autocomplete="off"
         name="search"
         placeholder="Search shows..."
-        :loading="props.isSearching"
         clearable
         @clear="localQuery = ''"
         @enter="handleSubmit"

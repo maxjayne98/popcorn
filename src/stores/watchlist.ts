@@ -1,3 +1,4 @@
+import { ref } from 'vue';
 import { defineStore } from 'pinia';
 
 const STORAGE_KEY = 'popcorn-watchlist';
@@ -30,37 +31,51 @@ function persistIds(ids: number[]) {
   }
 }
 
-export const useWatchlistStore = defineStore('watchlist', {
-  state: () => ({
-    pinnedIds: loadInitialIds() as number[],
-  }),
-  getters: {
-    isPinned: (state) => (id: number) => state.pinnedIds.includes(id),
-  },
-  actions: {
-    toggle(id: number) {
-      if (this.pinnedIds.includes(id)) {
-        this.pinnedIds = this.pinnedIds.filter((value) => value !== id);
-      } else {
-        this.pinnedIds = [...this.pinnedIds, id];
-      }
-      persistIds(this.pinnedIds);
-    },
-    add(id: number) {
-      if (!this.pinnedIds.includes(id)) {
-        this.pinnedIds = [...this.pinnedIds, id];
-        persistIds(this.pinnedIds);
-      }
-    },
-    remove(id: number) {
-      if (this.pinnedIds.includes(id)) {
-        this.pinnedIds = this.pinnedIds.filter((value) => value !== id);
-        persistIds(this.pinnedIds);
-      }
-    },
-    clear() {
-      this.pinnedIds = [];
-      persistIds(this.pinnedIds);
-    },
-  },
+export const useWatchlistStore = defineStore('watchlist', () => {
+  const pinnedIds = ref<number[]>(loadInitialIds());
+
+  function setPinnedIds(ids: number[]) {
+    pinnedIds.value = ids;
+    persistIds(ids);
+  }
+
+  function toggle(id: number) {
+    if (pinnedIds.value.includes(id)) {
+      setPinnedIds(pinnedIds.value.filter((value) => value !== id));
+    } else {
+      setPinnedIds([...pinnedIds.value, id]);
+    }
+  }
+
+  function add(id: number) {
+    if (!pinnedIds.value.includes(id)) {
+      setPinnedIds([...pinnedIds.value, id]);
+    }
+  }
+
+  function remove(id: number) {
+    if (pinnedIds.value.includes(id)) {
+      setPinnedIds(pinnedIds.value.filter((value) => value !== id));
+    }
+  }
+
+  function clear() {
+    setPinnedIds([]);
+  }
+
+  function $reset() {
+    setPinnedIds(loadInitialIds());
+  }
+
+  const isPinned = (id: number) => pinnedIds.value.includes(id);
+
+  return {
+    pinnedIds,
+    isPinned,
+    toggle,
+    add,
+    remove,
+    clear,
+    $reset,
+  };
 });

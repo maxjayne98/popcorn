@@ -2,11 +2,9 @@
 import { ref, watch } from 'vue';
 import { RouterView, useRoute, useRouter } from 'vue-router';
 import AppHeader from '@/components/AppHeader.vue';
-import { useSearchLoading } from '@/composables/useSearchLoading';
 
 const route = useRoute();
 const router = useRouter();
-const { isSearching } = useSearchLoading();
 
 const searchQuery = ref((route.query.q as string) ?? '');
 
@@ -39,7 +37,7 @@ async function handleSearch() {
 
 <template>
   <div class="app-shell">
-    <AppHeader v-model="searchQuery" :is-searching="isSearching" @submit="handleSearch" />
+    <AppHeader v-model="searchQuery" @submit="handleSearch" />
     <main>
       <RouterView v-slot="{ Component, route }">
         <Transition name="route-fade" mode="out-in">

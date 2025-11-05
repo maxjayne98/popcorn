@@ -1,3 +1,4 @@
+import { computed, reactive, ref } from 'vue';
 import { defineStore } from 'pinia';
 import * as tvmazeApi from '@/api/tvmaze';
 import type { SearchResult, TVMazeShow } from '@/types/tvmaze';
@@ -20,109 +21,130 @@ function sortShowsByRating(shows: Iterable<TVMazeShow>): TVMazeShow[] {
   });
 }
 
-export const useShowCatalogStore = defineStore('show-catalog', {
-  state: () => ({
-    allShows: [] as TVMazeShow[],
-    isLoading: false,
-    error: null as string | null,
-    showsIndex: new Map<number, TVMazeShow>(),
-    loadedPages: new Set<number>(),
-    searchCache: new Map<string, SearchResult[]>(),
-  }),
-  getters: {
-    genreCollections(state): GenreCollection[] {
-      const collections = new Map<string, TVMazeShow[]>();
+export const useShowCatalogStore = defineStore('show-catalog', () => {
+  const allShows = ref<TVMazeShow[]>([]);
+  const isLoading = ref(false);
+  const error = ref<string | null>(null);
+  const showsIndex = reactive(new Map<number, TVMazeShow>());
+  const loadedPages = reactive(new Set<number>());
+  const searchCache = reactive(new Map<string, SearchResult[]>());
 
-      for (const show of state.allShows) {
-        for (const genre of show.genres) {
-          if (!collections.has(genre)) {
-            collections.set(genre, []);
-          }
-          collections.get(genre)!.push(show);
+  const genreCollections = computed<GenreCollection[]>(() => {
+    const collections = new Map<string, TVMazeShow[]>();
+
+    for (const show of allShows.value) {
+      for (const genre of show.genres) {
+        if (!collections.has(genre)) {
+          collections.set(genre, []);
         }
+        collections.get(genre)!.push(show);
       }
+    }
 
-      return [...collections.entries()]
-        .map(([genre, shows]) => ({
-          genre,
-          shows: sortShowsByRating(shows),
-        }))
-        .sort((a, b) => a.genre.localeCompare(b.genre));
-    },
-  },
-  actions: {
-    async loadShows(pages: number[] = DEFAULT_PAGES) {
-      const pagesToFetch = pages.filter((page) => !this.loadedPages.has(page));
-      if (!pagesToFetch.length || this.isLoading) {
-        return;
-      }
+    return [...collections.entries()]
+      .map(([genre, shows]) => ({
+        genre,
+        shows: sortShowsByRating(shows),
+      }))
+      .sort((a, b) => a.genre.localeCompare(b.genre));
+  });
 
-      this.isLoading = true;
-      this.error = null;
+  async function loadShows(pages: number[] = DEFAULT_PAGES) {
+    const pagesToFetch = pages.filter((page) => !loadedPages.has(page));
+    if (!pagesToFetch.length || isLoading.value) {
+      return;
+    }
 
-      try {
-        const responses = await Promise.all(pagesToFetch.map((page) => tvmazeApi.fetchShowsPage(page)));
-        pagesToFetch.forEach((page) => this.loadedPages.add(page));
+    isLoading.value = true;
+    error.value = null;
 
-        let hasMutated = false;
-        for (const shows of responses) {
-          for (const show of shows) {
-            if (!this.showsIndex.has(show.id)) {
-              this.showsIndex.set(show.id, show);
-              hasMutated = true;
-            }
+    try {
+      const responses = await Promise.all(pagesToFetch.map((page) => tvmazeApi.fetchShowsPage(page)));
+      pagesToFetch.forEach((page) => loadedPages.add(page));
+
+      let hasMutated = false;
+      for (const shows of responses) {
+        for (const show of shows) {
+          if (!showsIndex.has(show.id)) {
+            showsIndex.set(show.id, show);
+            hasMutated = true;
           }
         }
-
-        if (hasMutated) {
-          this.allShows = sortShowsByRating(this.showsIndex.values());
-        }
-      } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Unknown error';
-      } finally {
-        this.isLoading = false;
-      }
-    },
-    async ensureShow(id: number): Promise<TVMazeShow | null> {
-      const existing = this.showsIndex.get(id);
-      if (existing && existing.summary) {
-        return existing;
       }
 
-      try {
-        const show = await tvmazeApi.fetchShowById(id);
-        this.showsIndex.set(show.id, show);
-        this.allShows = sortShowsByRating(this.showsIndex.values());
-        return show;
-      } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Unknown error';
-        return existing ?? null;
+      if (hasMutated) {
+        allShows.value = sortShowsByRating(showsIndex.values());
       }
-    },
-    async searchShows(query: string, signal?: AbortSignal): Promise<SearchResult[]> {
-      const normalized = query.trim().toLowerCase();
-      if (!normalized) {
-        return [];
+    } catch (caughtError) {
+      error.value = caughtError instanceof Error ? caughtError.message : 'Unknown error';
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  async function ensureShow(id: number): Promise<TVMazeShow | null> {
+    const existing = showsIndex.get(id);
+    if (existing && existing.summary) {
+      return existing;
+    }
+
+    try {
+      const show = await tvmazeApi.fetchShowById(id);
+      showsIndex.set(show.id, show);
+      allShows.value = sortShowsByRating(showsIndex.values());
+      return show;
+    } catch (caughtError) {
+      error.value = caughtError instanceof Error ? caughtError.message : 'Unknown error';
+      return existing ?? null;
+    }
+  }
+
+  async function searchShows(query: string, signal?: AbortSignal): Promise<SearchResult[]> {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) {
+      return [];
+    }
+
+    if (searchCache.has(normalized)) {
+      return searchCache.get(normalized)!;
+    }
+
+    const results = await tvmazeApi.searchShowsByName(normalized, signal);
+    searchCache.set(normalized, results);
+
+    for (const { show } of results) {
+      if (!showsIndex.has(show.id)) {
+        showsIndex.set(show.id, show);
+      } else {
+        const cached = showsIndex.get(show.id)!;
+        showsIndex.set(show.id, { ...cached, ...show });
       }
+    }
 
-      if (this.searchCache.has(normalized)) {
-        return this.searchCache.get(normalized)!;
-      }
+    allShows.value = sortShowsByRating(showsIndex.values());
+    return results;
+  }
 
-      const results = await tvmazeApi.searchShowsByName(normalized, signal);
-      this.searchCache.set(normalized, results);
+  function $reset() {
+    allShows.value = [];
+    isLoading.value = false;
+    error.value = null;
+    showsIndex.clear();
+    loadedPages.clear();
+    searchCache.clear();
+  }
 
-      for (const { show } of results) {
-        if (!this.showsIndex.has(show.id)) {
-          this.showsIndex.set(show.id, show);
-        } else {
-          const cached = this.showsIndex.get(show.id)!;
-          this.showsIndex.set(show.id, { ...cached, ...show });
-        }
-      }
-
-      this.allShows = sortShowsByRating(this.showsIndex.values());
-      return results;
-    },
-  },
+  return {
+    allShows,
+    isLoading,
+    error,
+    showsIndex,
+    loadedPages,
+    searchCache,
+    genreCollections,
+    loadShows,
+    ensureShow,
+    searchShows,
+    $reset,
+  };
 });

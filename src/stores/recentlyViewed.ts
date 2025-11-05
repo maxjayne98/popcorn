@@ -1,3 +1,4 @@
+import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
 import type { TVMazeShow } from '@/types/tvmaze';
 
@@ -32,25 +33,38 @@ function persist(items: TVMazeShow[]) {
   }
 }
 
-export const useRecentlyViewedStore = defineStore('recently-viewed', {
-  state: () => ({
-    items: loadInitial() as TVMazeShow[],
-  }),
-  getters: {
-    hasAny: (state) => state.items.length > 0,
-  },
-  actions: {
-    add(show: TVMazeShow) {
-      this.items = [show, ...this.items.filter((item) => item.id !== show.id)].slice(0, MAX_RECENT);
-      persist(this.items);
-    },
-    remove(id: number) {
-      this.items = this.items.filter((item) => item.id !== id);
-      persist(this.items);
-    },
-    clear() {
-      this.items = [];
-      persist(this.items);
-    },
-  },
+export const useRecentlyViewedStore = defineStore('recently-viewed', () => {
+  const items = ref<TVMazeShow[]>(loadInitial());
+
+  const hasAny = computed(() => items.value.length > 0);
+
+  function updateItems(next: TVMazeShow[]) {
+    items.value = next;
+    persist(items.value);
+  }
+
+  function add(show: TVMazeShow) {
+    updateItems([show, ...items.value.filter((item) => item.id !== show.id)].slice(0, MAX_RECENT));
+  }
+
+  function remove(id: number) {
+    updateItems(items.value.filter((item) => item.id !== id));
+  }
+
+  function clear() {
+    updateItems([]);
+  }
+
+  function $reset() {
+    updateItems(loadInitial());
+  }
+
+  return {
+    items,
+    hasAny,
+    add,
+    remove,
+    clear,
+    $reset,
+  };
 });

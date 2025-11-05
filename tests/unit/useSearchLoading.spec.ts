@@ -1,34 +1,49 @@
 /// <reference types="vitest" />
 
-import { describe, it, expect, beforeEach } from 'vitest';
-import { setActivePinia, createPinia } from 'pinia';
-import { useSearchLoading } from '@/composables/useSearchLoading';
-import { useSearchLoadingStore } from '@/stores/searchLoading';
+
 
 describe('useSearchLoading', () => {
-  beforeEach(() => {
-    setActivePinia(createPinia());
+  it('falls back to local state when no provider exists', () => {
+    const local = useSearchLoading();
+    expect(local.isSearching.value).toBe(false);
+    local.setSearching(true);
+    expect(local.isSearching.value).toBe(true);
   });
 
-  it('updates store state when setSearching is called', () => {
-    const { isSearching, setSearching } = useSearchLoading();
-    expect(isSearching.value).toBe(false);
+  it('shares state when a provider is used', () => {
+    const Consumer = defineComponent({
+      name: 'SearchLoadingConsumer',
+      setup(_, { expose }) {
+        const ctx = useSearchLoading();
+        expose({ ctx });
+        return () => null;
+      },
+    });
 
-    setSearching(true);
-    expect(isSearching.value).toBe(true);
+    const Provider = defineComponent({
+      name: 'SearchLoadingProviderTest',
+      setup(_, { expose }) {
+        const provided = provideSearchLoading();
+        expose({ provided });
+        return () => h(Consumer);
+      },
+    });
 
-    const store = useSearchLoadingStore();
-    expect(store.isSearching).toBe(true);
-  });
+    const wrapper = mount(Provider);
+    const providerExposed = (wrapper.vm.$ as any).exposed as {
+      provided: ReturnType<typeof provideSearchLoading>;
+    };
+    const provided = providerExposed.provided;
 
-  it('shares state across multiple composable instances', () => {
-    const first = useSearchLoading();
-    const second = useSearchLoading();
+    const consumerVm = wrapper.findComponent(Consumer).vm as any;
+    const consumerCtx = (consumerVm.$.exposed as { ctx: ReturnType<typeof useSearchLoading> }).ctx;
 
-    first.setSearching(true);
-    expect(second.isSearching.value).toBe(true);
+    provided.setSearching(true);
+    expect(provided.isSearching.value).toBe(true);
+    expect(consumerCtx.isSearching.value).toBe(true);
 
-    second.setSearching(false);
-    expect(first.isSearching.value).toBe(false);
+    consumerCtx.setSearching(false);
+    expect(consumerCtx.isSearching.value).toBe(false);
+    expect(provided.isSearching.value).toBe(false);
   });
 });

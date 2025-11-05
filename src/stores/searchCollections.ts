@@ -1,3 +1,4 @@
+import { ref } from 'vue';
 import { defineStore } from 'pinia';
 
 export interface SavedSearch {
@@ -38,30 +39,46 @@ function persist(searches: SavedSearch[]) {
   }
 }
 
-export const useSearchCollectionsStore = defineStore('search-collections', {
-  state: () => ({
-    entries: loadInitial() as SavedSearch[],
-  }),
-  actions: {
-    add(label: string, query: string, minRating: number) {
-      const entry: SavedSearch = {
-        id: typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
-        label,
-        query,
-        minRating,
-        createdAt: new Date().toISOString(),
-      };
-      this.entries = [entry, ...this.entries];
-      persist(this.entries);
-      return entry.id;
-    },
-    remove(id: string) {
-      this.entries = this.entries.filter((item) => item.id !== id);
-      persist(this.entries);
-    },
-    clear() {
-      this.entries = [];
-      persist(this.entries);
-    },
-  },
+export const useSearchCollectionsStore = defineStore('search-collections', () => {
+  const entries = ref<SavedSearch[]>(loadInitial());
+
+  function setEntries(next: SavedSearch[]) {
+    entries.value = next;
+    persist(entries.value);
+  }
+
+  function add(label: string, query: string, minRating: number) {
+    const entry: SavedSearch = {
+      id:
+        typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random()}`,
+      label,
+      query,
+      minRating,
+      createdAt: new Date().toISOString(),
+    };
+    setEntries([entry, ...entries.value]);
+    return entry.id;
+  }
+
+  function remove(id: string) {
+    setEntries(entries.value.filter((item) => item.id !== id));
+  }
+
+  function clear() {
+    setEntries([]);
+  }
+
+  function $reset() {
+    setEntries(loadInitial());
+  }
+
+  return {
+    entries,
+    add,
+    remove,
+    clear,
+    $reset,
+  };
 });

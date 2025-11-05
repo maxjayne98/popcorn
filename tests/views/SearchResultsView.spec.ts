@@ -6,13 +6,11 @@ import { defineComponent, h, reactive } from 'vue';
 import { setActivePinia, createPinia } from 'pinia';
 import SearchResultsView from '@/views/SearchResultsView.vue';
 import type { TVMazeShow, SearchResult } from '@/types/tvmaze';
-import { useSearchLoadingStore } from '@/stores/searchLoading';
 import { useSearchCollectionsStore } from '@/stores/searchCollections';
 
 let searchShowsMock: ReturnType<typeof vi.fn>;
 let routeMock: { query: Record<string, unknown> };
 let routerMock: { push: ReturnType<typeof vi.fn> };
-let searchStore: ReturnType<typeof useSearchLoadingStore>;
 let searchCollectionsStore: ReturnType<typeof useSearchCollectionsStore>;
 
 vi.mock('@/composables/useShowCatalog', () => ({
@@ -43,6 +41,14 @@ const SearchResultsListStub = defineComponent({
       );
   },
 });
+
+function createGlobalOptions() {
+  return {
+    stubs: {
+      SearchResultsList: SearchResultsListStub,
+    },
+  };
+}
 
 function createShow(overrides: Partial<TVMazeShow> = {}): TVMazeShow {
   const base: TVMazeShow = {
@@ -89,8 +95,6 @@ describe('SearchResultsView', () => {
     };
 
     setActivePinia(createPinia());
-    searchStore = useSearchLoadingStore();
-    searchStore.$reset();
     searchCollectionsStore = useSearchCollectionsStore();
     searchCollectionsStore.clear();
   });
@@ -109,17 +113,13 @@ describe('SearchResultsView', () => {
     routeMock.query.q = '  Lost  ';
 
     const wrapper = mount(SearchResultsView, {
-      global: {
-        stubs: {
-          SearchResultsList: SearchResultsListStub,
-        },
-      },
+      global: createGlobalOptions(),
     });
 
     await flushPromises();
 
     expect(searchShowsMock).toHaveBeenCalledWith('Lost', expect.any(AbortSignal));
-    expect(searchStore.isSearching).toBe(false);
+    expect(wrapper.vm.isSearching).toBe(false);
 
     const resultsStub = wrapper.find('.search-results-stub');
     expect(resultsStub.exists()).toBe(true);
@@ -137,11 +137,7 @@ describe('SearchResultsView', () => {
     routeMock.query.q = 'Space';
 
     const wrapper = mount(SearchResultsView, {
-      global: {
-        stubs: {
-          SearchResultsList: SearchResultsListStub,
-        },
-      },
+      global: createGlobalOptions(),
     });
 
     await flushPromises();
@@ -158,11 +154,7 @@ describe('SearchResultsView', () => {
     routeMock.query.q = '';
 
     mount(SearchResultsView, {
-      global: {
-        stubs: {
-          SearchResultsList: SearchResultsListStub,
-        },
-      },
+      global: createGlobalOptions(),
     });
 
     await flushPromises();
@@ -174,11 +166,7 @@ describe('SearchResultsView', () => {
     routeMock.query.q = 'Drama';
 
     const wrapper = mount(SearchResultsView, {
-      global: {
-        stubs: {
-          SearchResultsList: SearchResultsListStub,
-        },
-      },
+      global: createGlobalOptions(),
     });
 
     await flushPromises();
@@ -186,7 +174,7 @@ describe('SearchResultsView', () => {
     const errorMessage = wrapper.find('.state--error');
     expect(errorMessage.exists()).toBe(true);
     expect(errorMessage.text()).toContain('Search offline');
-    expect(searchStore.isSearching).toBe(false);
+    expect(wrapper.vm.isSearching).toBe(false);
   });
 
   it('applies a saved search shortcut and updates the route', async () => {
@@ -198,11 +186,7 @@ describe('SearchResultsView', () => {
     routeMock.query.q = 'Mystery';
 
     const wrapper = mount(SearchResultsView, {
-      global: {
-        stubs: {
-          SearchResultsList: SearchResultsListStub,
-        },
-      },
+      global: createGlobalOptions(),
     });
 
     await flushPromises();
