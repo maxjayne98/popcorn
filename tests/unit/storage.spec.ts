@@ -36,21 +36,28 @@ class MockStorage implements Storage {
 const isNumber = (value: unknown): value is number => typeof value === 'number';
 
 describe('storage utils', () => {
-  let originalWarn: typeof console.warn;
+  let originalStorageDescriptor: PropertyDescriptor | undefined;
   let mockStorage: MockStorage;
+  let warnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     mockStorage = new MockStorage();
+    originalStorageDescriptor = Object.getOwnPropertyDescriptor(window, 'localStorage');
     Object.defineProperty(window, 'localStorage', {
       configurable: true,
       value: mockStorage,
     });
-    originalWarn = console.warn;
-    console.warn = vi.fn();
+    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
   afterEach(() => {
-    console.warn = originalWarn;
+    warnSpy.mockRestore();
+    if (originalStorageDescriptor) {
+      Object.defineProperty(window, 'localStorage', originalStorageDescriptor);
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+      delete (window as unknown as Record<string, unknown>).localStorage;
+    }
   });
 
   it('loads and filters values using the provided type guard', () => {
@@ -68,7 +75,7 @@ describe('storage utils', () => {
     mockStorage.setItem(STORAGE_KEY, JSON.stringify({ value: [1, 2, 3] }));
     expect(loadArrayFromStorage(STORAGE_KEY, isNumber)).toEqual([]);
 
-    expect(console.warn).toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalled();
   });
 
   it('saves arrays to localStorage as JSON strings', () => {
