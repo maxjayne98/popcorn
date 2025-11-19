@@ -76,7 +76,7 @@ function applySavedSearch(entry: SavedSearch) {
 }
 
 .saved-searches__list {
-  display: grid;
+  display: flex;
   gap: 0.5rem;
   margin: 0;
   padding: 0;
@@ -97,6 +97,7 @@ function applySavedSearch(entry: SavedSearch) {
   color: rgba(255, 255, 255, 0.85);
   font-size: 0.75rem;
   cursor: pointer;
+  display: flex;
 }
 
 .saved-searches__rating {

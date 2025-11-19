@@ -225,7 +225,7 @@ onBeforeUnmount(() => {
       </header>
       <ul class="saved-searches__list">
         <li v-for="entry in savedSearches" :key="entry.id">
-          <button type="button" @click="applySavedSearch(entry)">
+          <button class="saved-searches__button" type="button" @click="applySavedSearch(entry)">
             {{ entry.label }} (min
             <span class="saved-searches__rating">
               <ImdbIcon aria-hidden="true" />
@@ -359,7 +359,7 @@ onBeforeUnmount(() => {
 }
 
 .saved-searches__list {
-  display: grid;
+  display: flex;
   gap: 0.75rem;
   list-style: none;
   padding: 0;
@@ -410,6 +410,10 @@ onBeforeUnmount(() => {
 
 .state--error {
   color: #ff6584;
+}
+
+.saved-searches__button{
+  display: flex;
 }
 
 @media (max-width: 640px) {
