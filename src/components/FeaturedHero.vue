@@ -22,13 +22,13 @@ const {
   onMouseEnter: handleHeroMouseEnter,
   onMouseLeave: handleHeroMouseLeave,
   onMouseMove: handleHeroMouseMove,
-} = useParallaxBackground({ range: 32 });
+} = useParallaxBackground({ range: 16 });
 
 const featuredBackdropStyle = computed(() => {
   const baseStyle = { ...heroParallaxStyle.value } as Record<string, string>;
   const image = props.show.image?.original ?? props.show.image?.medium;
   if (image) {
-    baseStyle.backgroundImage = `linear-gradient(135deg, rgba(8, 9, 15, 0.9) 10%, rgba(8, 9, 15, 0.15) 70%), url('${image}')`;
+    baseStyle.backgroundImage = `linear-gradient(135deg, rgba(8, 9, 15, 0.3) 10%, rgba(8, 9, 15, 0.15) 30%), url('${image}')`;
   }
   return baseStyle;
 });
